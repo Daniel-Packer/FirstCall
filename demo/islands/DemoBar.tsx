@@ -1,7 +1,9 @@
 import { useEffect, useState } from "preact/hooks";
 import {
   clearPermissionDecisions,
+  clearProtections,
   clearQuestions,
+  clearRevocations,
   DEMO_STAGE_DEFAULT,
   DEMO_STAGE_MAX,
   LOCALSTORAGE_KEY,
@@ -75,6 +77,8 @@ export default function DemoBar() {
               dispatch(DEMO_STAGE_DEFAULT);
               clearPermissionDecisions();
               clearQuestions();
+              clearProtections();
+              clearRevocations();
             }}
           >
             Reset

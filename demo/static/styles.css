@@ -85,3 +85,69 @@ body {
     0 10px 0 var(--brand-blue),
     0 20px 0 var(--brand-blue);
 }
+
+/* Accessibility: large-text mode — opt-in scaling for low vision users */
+[data-text-size="large"] .text-\[10px\],
+[data-text-size="large"] .text-\[11px\] {
+  font-size: 13px !important;
+  line-height: 1.55;
+}
+[data-text-size="large"] .text-xs { font-size: 14px !important; line-height: 1.5; }
+[data-text-size="large"] .text-sm { font-size: 16px !important; line-height: 1.55; }
+[data-text-size="large"] .text-base { font-size: 18px !important; line-height: 1.6; }
+[data-text-size="large"] .text-lg { font-size: 20px !important; }
+[data-text-size="large"] .text-xl { font-size: 24px !important; }
+[data-text-size="large"] .text-2xl { font-size: 28px !important; }
+[data-text-size="large"] .text-3xl { font-size: 32px !important; }
+[data-text-size="large"] .text-4xl { font-size: 38px !important; }
+[data-text-size="large"] .text-5xl { font-size: 44px !important; }
+
+/* Glossary tooltip — plain-language explainer for jargon */
+.glossary-term {
+  position: relative;
+  border-bottom: 1.5px dotted var(--brand-blue);
+  cursor: help;
+  color: var(--brand-blue);
+  font-weight: 600;
+}
+.glossary-term:hover .glossary-popover,
+.glossary-term:focus-within .glossary-popover,
+.glossary-term:focus .glossary-popover {
+  display: block;
+}
+.glossary-popover {
+  display: none;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  width: max-content;
+  max-width: 280px;
+  padding: 10px 12px;
+  background: var(--brand-navy);
+  color: white;
+  font-size: 12px;
+  line-height: 1.5;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px -8px rgba(10, 18, 36, 0.4);
+  font-weight: 400;
+}
+.glossary-popover::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: 12px;
+  width: 8px;
+  height: 8px;
+  background: var(--brand-navy);
+  transform: rotate(45deg);
+}
+.glossary-popover .glossary-term-name {
+  display: block;
+  color: var(--brand-blue);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}

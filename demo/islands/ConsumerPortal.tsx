@@ -1,31 +1,54 @@
+import type { ComponentChildren } from "preact";
 import { useEffect, useState } from "preact/hooks";
 import {
+  ACCESS_LOG_DEMO,
   addQuestion,
   DEMO_CASE,
   DEMO_STAGE_DEFAULT,
+  FINANCIAL_IMPACT_DEMO,
+  type FinancialImpactItem,
   formatDecidedAt,
+  GLOSSARY,
   INITIAL_PERMISSIONS,
+  type Language,
+  loadActiveProtections,
+  loadLanguage,
   loadPermissionDecisions,
   loadQuestions,
+  loadRevokedPermissions,
+  loadTextSize,
   LOCALSTORAGE_KEY,
   NODE_STATES_BY_STAGE,
   type NodeQuestion,
   type NodeState,
   PERMISSIONS_CHANGE_EVENT,
   type Permission,
+  PREFS_CHANGE_EVENT,
   PROCESS_NODES,
+  PROTECTIVE_ACTIONS,
+  PROTECTIVE_ACTIONS_EVENT,
   QUESTIONS_CHANGE_EVENT,
+  REASSURANCE_COPY,
+  revokePermission,
+  REVOKED_PERMISSIONS_EVENT,
   savePermissionDecisions,
+  saveLanguage,
+  saveTextSize,
   STAGE_CHANGE_EVENT,
+  t,
+  type TextSize,
+  toggleProtection,
 } from "../lib/demoData.ts";
 
-type Tab = "status" | "permissions" | "resolution";
+type Tab = "status" | "permissions" | "finances" | "resolution";
 
 export default function ConsumerPortal() {
   const [stage, setStage] = useState(DEMO_STAGE_DEFAULT);
   const [activeTab, setActiveTab] = useState<Tab>("status");
   const [accepted, setAccepted] = useState(false);
   const [disputeSubmitted, setDisputeSubmitted] = useState(false);
+  const [language, setLanguage] = useState<Language>("en");
+  const [textSize, setTextSize] = useState<TextSize>("normal");
 
   const nodeStates = NODE_STATES_BY_STAGE[stage] ?? NODE_STATES_BY_STAGE[DEMO_STAGE_DEFAULT];
   const isResolved = stage >= 8;
@@ -38,23 +61,40 @@ export default function ConsumerPortal() {
       if (!isNaN(n)) setStage(n);
     }
 
+    setLanguage(loadLanguage());
+    setTextSize(loadTextSize());
+
     const handler = (e: Event) => {
       const next = (e as CustomEvent<number>).detail;
       setStage(next);
       if (next >= 8) setActiveTab("resolution");
     };
+    const prefsHandler = () => {
+      setLanguage(loadLanguage());
+      setTextSize(loadTextSize());
+    };
     globalThis.addEventListener(STAGE_CHANGE_EVENT, handler);
-    return () => globalThis.removeEventListener(STAGE_CHANGE_EVENT, handler);
+    globalThis.addEventListener(PREFS_CHANGE_EVENT, prefsHandler);
+    return () => {
+      globalThis.removeEventListener(STAGE_CHANGE_EVENT, handler);
+      globalThis.removeEventListener(PREFS_CHANGE_EVENT, prefsHandler);
+    };
   }, []);
 
+  useEffect(() => {
+    document.body.dataset.textSize = textSize;
+    document.documentElement.lang = language;
+  }, [textSize, language]);
+
   const tabs: { id: Tab; label: string; badge?: string }[] = [
-    { id: "status", label: "Case Status" },
-    { id: "permissions", label: "Permissions" },
+    { id: "status", label: t(language, "case_status") },
+    { id: "permissions", label: t(language, "permissions") },
+    { id: "finances", label: t(language, "finances") },
     ...(isResolved
       ? [
           {
             id: "resolution" as Tab,
-            label: "Resolution",
+            label: t(language, "resolution"),
             badge: !accepted && !disputeSubmitted ? "Action needed" : undefined,
           },
         ]
@@ -65,19 +105,33 @@ export default function ConsumerPortal() {
     <div class="min-h-screen bg-brand-slate pb-16">
       {/* Bank header */}
       <header class="bg-brand-navy text-white px-4 py-2.5 border-b-2 border-brand-blue/40">
-        <div class="max-w-2xl mx-auto flex items-center justify-between">
+        <div class="max-w-2xl mx-auto flex items-center justify-between gap-3">
           <div class="flex items-center gap-2.5">
             <div class="bg-white rounded-md p-1">
               <img src="/firstcall-logo.png" alt="FirstCall" class="h-5 w-auto" />
             </div>
             <div>
               <div class="font-semibold text-xs leading-tight">First Community Bank</div>
-              <div class="text-slate-300 text-[10px]">Fraud Claim Portal · ClearPath</div>
+              <div class="text-slate-300 text-[11px]">{t(language, "portal_label")} · ClearPath</div>
             </div>
           </div>
-          <div class="text-right text-xs">
-            <div class="font-medium">{DEMO_CASE.consumer.name}</div>
-            <div class="text-slate-400 text-[11px]">Account ••••{DEMO_CASE.consumer.accountEnding}</div>
+          <div class="flex items-center gap-3">
+            <AccessibilityControls
+              language={language}
+              textSize={textSize}
+              onLanguage={(l) => {
+                saveLanguage(l);
+                setLanguage(l);
+              }}
+              onTextSize={(s) => {
+                saveTextSize(s);
+                setTextSize(s);
+              }}
+            />
+            <div class="text-right text-xs">
+              <div class="font-medium">{DEMO_CASE.consumer.name}</div>
+              <div class="text-slate-400 text-[11px]">••••{DEMO_CASE.consumer.accountEnding}</div>
+            </div>
           </div>
         </div>
       </header>
@@ -115,6 +169,14 @@ export default function ConsumerPortal() {
         </div>
       </div>
 
+      {/* Reassurance + Right Now (only when case is open) */}
+      {!isResolved && (
+        <div class="max-w-2xl mx-auto px-4 pt-3">
+          <ReassuranceBanner language={language} />
+          <RightNowPanel language={language} />
+        </div>
+      )}
+
       {/* Tabs */}
       <div class="bg-white border-b border-gray-200">
         <div class="max-w-2xl mx-auto px-4">
@@ -144,9 +206,10 @@ export default function ConsumerPortal() {
       {/* Tab content */}
       <div class="max-w-2xl mx-auto px-4 py-3">
         {activeTab === "status" && (
-          <StatusTab nodeStates={nodeStates} stage={stage} />
+          <StatusTab nodeStates={nodeStates} stage={stage} language={language} />
         )}
-        {activeTab === "permissions" && <PermissionsTab />}
+        {activeTab === "permissions" && <PermissionsTab language={language} />}
+        {activeTab === "finances" && <FinancialImpactTab language={language} />}
         {activeTab === "resolution" && isResolved && (
           <ResolutionTab
             accepted={accepted}
@@ -154,6 +217,7 @@ export default function ConsumerPortal() {
             disputeSubmitted={disputeSubmitted}
             setDisputeSubmitted={setDisputeSubmitted}
             resolutionMessage={resolutionMessage}
+            language={language}
           />
         )}
       </div>
@@ -161,7 +225,7 @@ export default function ConsumerPortal() {
       {/* Support footer */}
       <div class="max-w-2xl mx-auto px-4 pb-2">
         <div class="text-center text-[11px] text-gray-500">
-          Questions about your case?{" "}
+          {t(language, "questions_about_case")}{" "}
           <a href="tel:18005551234" class="font-semibold text-brand-blue">
             (800) 555-1234
           </a>
@@ -173,7 +237,15 @@ export default function ConsumerPortal() {
   );
 }
 
-function StatusTab({ nodeStates, stage }: { nodeStates: NodeState[]; stage: number }) {
+function StatusTab({
+  nodeStates,
+  stage,
+  language,
+}: {
+  nodeStates: NodeState[];
+  stage: number;
+  language: Language;
+}) {
   const [questions, setQuestions] = useState<NodeQuestion[]>([]);
   const [expandedNode, setExpandedNode] = useState<number | null>(null);
   const [askingNode, setAskingNode] = useState<number | null>(null);
@@ -191,7 +263,7 @@ function StatusTab({ nodeStates, stage }: { nodeStates: NodeState[]; stage: numb
   return (
     <div>
       <h2 class="text-[11px] font-bold text-brand-navy uppercase tracking-wider mb-2">
-        Investigation Progress
+        {t(language, "investigation_progress")}
       </h2>
 
       <div class="bg-white border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100">
@@ -419,8 +491,17 @@ function NodeQA({
   );
 }
 
-function PermissionsTab() {
+function PermissionsTab({ language }: { language: Language }) {
   const [permissions, setPermissions] = useState<Permission[]>(INITIAL_PERMISSIONS);
+  const [revoked, setRevoked] = useState<string[]>([]);
+  const [showLog, setShowLog] = useState(false);
+
+  useEffect(() => {
+    setRevoked(loadRevokedPermissions());
+    const handler = () => setRevoked(loadRevokedPermissions());
+    globalThis.addEventListener(REVOKED_PERMISSIONS_EVENT, handler);
+    return () => globalThis.removeEventListener(REVOKED_PERMISSIONS_EVENT, handler);
+  }, []);
 
   useEffect(() => {
     const apply = () => {
@@ -461,95 +542,175 @@ function PermissionsTab() {
 
   return (
     <div>
-      <h2 class="text-base font-semibold text-brand-navy mb-1">Information Access Permissions</h2>
-      <p class="text-xs text-gray-500 mb-5 leading-relaxed">
-        A record of each permission your bank requested. Pending items are awaiting your decision;
-        granted and denied consents are timestamped.
+      <h2 class="text-sm font-bold text-brand-navy uppercase tracking-wider mb-1">
+        {t(language, "information_access")}
+      </h2>
+      <p class="text-xs text-gray-500 mb-3 leading-relaxed">
+        Real control: revoke any permission instantly, narrow the scope, and see exactly when your data
+        was accessed. Permissions auto-expire 60 days after your case closes.
       </p>
 
-      <div class="space-y-2.5">
-        {permissions.map((perm) => (
-          <div
-            key={perm.id}
-            class={`rounded-xl border p-4 ${
-              perm.status === "granted"
-                ? "bg-green-50 border-green-200"
-                : perm.status === "denied"
-                ? "bg-gray-50 border-gray-200"
-                : "bg-brand-blue-soft border-brand-blue/30"
-            }`}
-          >
-            <div class="flex items-start gap-3">
-              {perm.status === "granted" && (
-                <svg class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-              )}
-              {perm.status === "denied" && (
-                <svg class="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              )}
-              {perm.status === "pending" && (
-                <svg class="w-5 h-5 text-brand-blue flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              )}
+      <div class="space-y-2">
+        {permissions.map((perm) => {
+          const isRevoked = revoked.includes(perm.id);
+          const effectiveStatus = isRevoked ? "denied" : perm.status;
+          return (
+            <div
+              key={perm.id}
+              class={`rounded-xl border p-3 ${
+                isRevoked
+                  ? "bg-gray-50 border-gray-200 opacity-80"
+                  : effectiveStatus === "granted"
+                  ? "bg-green-50 border-green-200"
+                  : effectiveStatus === "denied"
+                  ? "bg-gray-50 border-gray-200"
+                  : "bg-brand-blue-soft border-brand-blue/30"
+              }`}
+            >
+              <div class="flex items-start gap-3">
+                {effectiveStatus === "granted" && !isRevoked && (
+                  <svg class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                )}
+                {(effectiveStatus === "denied" || isRevoked) && (
+                  <svg class="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                )}
+                {effectiveStatus === "pending" && (
+                  <svg class="w-5 h-5 text-brand-blue flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                )}
 
-              <div class="flex-1 min-w-0">
-                <div class="flex items-center justify-between gap-2">
-                  <span class="text-sm font-semibold text-brand-navy">{perm.label}</span>
-                  <span
-                    class={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${
-                      perm.status === "granted"
-                        ? "bg-green-100 text-green-700"
-                        : perm.status === "denied"
-                        ? "bg-gray-200 text-gray-500"
-                        : "bg-white text-brand-blue border border-brand-blue/30"
-                    }`}
-                  >
-                    {perm.status === "granted"
-                      ? "Granted"
-                      : perm.status === "denied"
-                      ? "Denied"
-                      : "Awaiting your decision"}
-                  </span>
-                </div>
-                <p class="text-xs text-gray-500 mt-1 leading-relaxed">{perm.description}</p>
-                {perm.status === "granted" && perm.grantedAt && (
-                  <p class="text-xs text-green-600 mt-1">Granted: {perm.grantedAt}</p>
-                )}
-                {perm.status === "denied" && (
-                  <p class="text-xs text-gray-400 mt-1">Not granted by you</p>
-                )}
-                {perm.status === "pending" && (
-                  <div class="flex gap-2 mt-2">
-                    <button
-                      class="text-xs font-semibold py-1.5 px-3 rounded-md bg-brand-blue hover:bg-brand-blue-hover text-white transition-colors"
-                      onClick={() => decide(perm.id, "granted")}
+                <div class="flex-1 min-w-0">
+                  <div class="flex items-center justify-between gap-2">
+                    <span class="text-sm font-semibold text-brand-navy">{perm.label}</span>
+                    <span
+                      class={`text-[11px] font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${
+                        isRevoked
+                          ? "bg-gray-200 text-gray-600"
+                          : effectiveStatus === "granted"
+                          ? "bg-green-100 text-green-700"
+                          : effectiveStatus === "denied"
+                          ? "bg-gray-200 text-gray-500"
+                          : "bg-white text-brand-blue border border-brand-blue/30"
+                      }`}
                     >
-                      Grant
-                    </button>
-                    <button
-                      class="text-xs font-semibold py-1.5 px-3 rounded-md bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 transition-colors"
-                      onClick={() => decide(perm.id, "denied")}
-                    >
-                      Decline
-                    </button>
+                      {isRevoked
+                        ? t(language, "revoked")
+                        : effectiveStatus === "granted"
+                        ? "Granted"
+                        : effectiveStatus === "denied"
+                        ? "Denied"
+                        : "Awaiting your decision"}
+                    </span>
                   </div>
-                )}
+                  <p class="text-xs text-gray-500 mt-1 leading-relaxed">{perm.description}</p>
+                  {effectiveStatus === "granted" && !isRevoked && perm.grantedAt && (
+                    <div class="flex items-center justify-between gap-2 mt-1.5 text-[11px]">
+                      <span class="text-green-700">Granted {perm.grantedAt}</span>
+                      <span class="text-gray-400">
+                        {t(language, "expires")} 60 days after case close
+                      </span>
+                    </div>
+                  )}
+                  {isRevoked && (
+                    <p class="text-[11px] text-gray-500 mt-1">
+                      You revoked access. The bank can no longer use this data.
+                    </p>
+                  )}
+                  {effectiveStatus === "denied" && !isRevoked && (
+                    <p class="text-[11px] text-gray-400 mt-1">Not granted by you</p>
+                  )}
+                  {effectiveStatus === "pending" && (
+                    <div class="flex gap-2 mt-2">
+                      <button
+                        class="text-xs font-semibold py-1.5 px-3 rounded-md bg-brand-blue hover:bg-brand-blue-hover text-white transition-colors"
+                        onClick={() => decide(perm.id, "granted")}
+                      >
+                        Grant
+                      </button>
+                      <button
+                        class="text-xs font-semibold py-1.5 px-3 rounded-md bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 transition-colors"
+                        onClick={() => decide(perm.id, "denied")}
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  )}
+                  {effectiveStatus === "granted" && !isRevoked && (
+                    <div class="mt-2">
+                      <button
+                        type="button"
+                        class="text-[11px] font-semibold text-red-600 hover:text-red-700 transition-colors"
+                        onClick={() => {
+                          if (
+                            confirm(
+                              "Revoke this permission? The bank will lose access immediately, which may slow your case.",
+                            )
+                          ) {
+                            revokePermission(perm.id);
+                          }
+                        }}
+                      >
+                        {t(language, "revoke")} access
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      <p class="mt-4 text-xs text-gray-400 text-center">
-        To revoke a permission, call{" "}
-        <a href="tel:18005551234" class="text-brand-blue font-semibold">
-          (800) 555-1234
-        </a>
-      </p>
+      <button
+        type="button"
+        class="mt-3 w-full bg-white border border-gray-200 rounded-xl px-4 py-2.5 flex items-center justify-between text-left hover:bg-gray-50 transition-colors"
+        onClick={() => setShowLog((v) => !v)}
+        aria-expanded={showLog}
+      >
+        <div>
+          <div class="text-xs font-bold text-brand-navy uppercase tracking-wider">
+            {t(language, "access_log_title")}
+          </div>
+          <div class="text-[11px] text-gray-500">
+            {ACCESS_LOG_DEMO.length} access events on file
+          </div>
+        </div>
+        <svg
+          class={`w-4 h-4 text-gray-400 transition-transform ${showLog ? "rotate-180" : ""}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2.5}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {showLog && (
+        <div class="mt-2 bg-white border border-gray-200 rounded-xl divide-y divide-gray-100 overflow-hidden">
+          {ACCESS_LOG_DEMO.map((entry, idx) => {
+            const perm = INITIAL_PERMISSIONS.find((p) => p.id === entry.permissionId);
+            return (
+              <div key={idx} class="px-4 py-2.5">
+                <div class="flex items-center justify-between gap-3">
+                  <div class="text-xs font-semibold text-brand-navy">
+                    {perm?.label ?? entry.permissionId}
+                  </div>
+                  <div class="text-[11px] text-gray-400">{entry.accessedAt}</div>
+                </div>
+                <div class="text-[11px] text-gray-500 mt-0.5">
+                  {entry.accessor} · {entry.scope}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
@@ -560,12 +721,14 @@ function ResolutionTab({
   disputeSubmitted,
   setDisputeSubmitted,
   resolutionMessage,
+  language,
 }: {
   accepted: boolean;
   setAccepted: (v: boolean) => void;
   disputeSubmitted: boolean;
   setDisputeSubmitted: (v: boolean) => void;
   resolutionMessage: string;
+  language: Language;
 }) {
   const [showDisputeForm, setShowDisputeForm] = useState(false);
   const [disputeReason, setDisputeReason] = useState("");
@@ -590,10 +753,13 @@ function ResolutionTab({
           </svg>
         </div>
         <h2 class="text-xl font-bold text-brand-navy mb-2 tracking-tight">Resolution Accepted</h2>
-        <p class="text-sm text-gray-500 max-w-sm mx-auto leading-relaxed">
+        <p class="text-sm text-gray-500 max-w-sm mx-auto leading-relaxed mb-5">
           Thank you for confirming. Case #{DEMO_CASE.id} is now closed. The credit of{" "}
           {DEMO_CASE.amount} will appear in your account within 1–2 business days.
         </p>
+        <div class="max-w-md mx-auto text-left">
+          <PostResolutionProtection language={language} />
+        </div>
       </div>
     );
   }
@@ -755,6 +921,296 @@ function ResolutionTab({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function GlossaryTooltip({ termKey, children }: { termKey: keyof typeof GLOSSARY; children: ComponentChildren }) {
+  const term = GLOSSARY[termKey];
+  if (!term) return <>{children}</>;
+  return (
+    <span class="glossary-term" tabIndex={0} role="button" aria-label={`What is ${term.term}?`}>
+      {children}
+      <span class="glossary-popover" role="tooltip">
+        <span class="glossary-term-name">{term.term}</span>
+        {term.long}
+      </span>
+    </span>
+  );
+}
+
+function ReassuranceBanner({ language }: { language: Language }) {
+  return (
+    <div class="bg-gradient-to-r from-brand-blue to-brand-blue-hover text-white rounded-xl px-4 py-3 mb-3 shadow-lg shadow-brand-blue/20">
+      <div class="flex items-start gap-3">
+        <svg class="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.4}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+        </svg>
+        <div class="min-w-0">
+          <div class="text-sm font-bold">{t(language, "youre_protected_title")}</div>
+          <p class="text-[12px] leading-relaxed text-white/90 mt-0.5">
+            {t(language, "youre_protected_body")}{" "}
+            <GlossaryTooltip termKey="reg_e">
+              <span class="font-semibold underline-offset-2">Regulation E</span>
+            </GlossaryTooltip>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RightNowPanel({ language }: { language: Language }) {
+  const [active, setActive] = useState<string[]>([]);
+
+  useEffect(() => {
+    setActive(loadActiveProtections());
+    const handler = () => setActive(loadActiveProtections());
+    globalThis.addEventListener(PROTECTIVE_ACTIONS_EVENT, handler);
+    return () => globalThis.removeEventListener(PROTECTIVE_ACTIONS_EVENT, handler);
+  }, []);
+
+  const top = PROTECTIVE_ACTIONS.slice(0, 3);
+  const allCount = PROTECTIVE_ACTIONS.length;
+  const activeCount = active.length;
+
+  return (
+    <div class="bg-white border border-amber-200 rounded-xl p-3 mb-3">
+      <div class="flex items-center justify-between mb-2">
+        <div class="flex items-center gap-2">
+          <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-amber-100 text-amber-700 flex-shrink-0">
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </span>
+          <div>
+            <div class="text-xs font-bold text-brand-navy">{t(language, "right_now_title")}</div>
+            <div class="text-[11px] text-gray-500">{t(language, "right_now_subtitle")}</div>
+          </div>
+        </div>
+        <a
+          href="tel:18005551234"
+          class="text-[11px] font-semibold text-brand-blue hover:text-brand-blue-hover whitespace-nowrap inline-flex items-center gap-1"
+        >
+          <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+          </svg>
+          {t(language, "talk_to_human")}
+        </a>
+      </div>
+
+      <div class="grid grid-cols-3 gap-2">
+        {top.map((action) => {
+          const isOn = active.includes(action.id);
+          return (
+            <button
+              type="button"
+              key={action.id}
+              onClick={() => toggleProtection(action.id)}
+              class={`text-left rounded-lg border px-2.5 py-2 transition-colors ${
+                isOn
+                  ? "bg-green-50 border-green-300"
+                  : "bg-gray-50 border-gray-200 hover:border-brand-blue/40 hover:bg-brand-blue-soft/40"
+              }`}
+              aria-pressed={isOn}
+            >
+              <div class="flex items-center gap-1.5 mb-1">
+                {isOn ? (
+                  <svg class="w-3.5 h-3.5 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                ) : (
+                  <span class="w-3.5 h-3.5 rounded-full border-2 border-gray-300 flex-shrink-0" />
+                )}
+                <span class={`text-[11px] font-semibold leading-tight ${isOn ? "text-green-800" : "text-brand-navy"}`}>
+                  {action.label}
+                </span>
+              </div>
+              <div class="text-[10px] text-gray-500 leading-snug">{action.description}</div>
+            </button>
+          );
+        })}
+      </div>
+      {allCount > 3 && (
+        <div class="text-[11px] text-gray-400 mt-2 text-center">
+          {activeCount} of {allCount} protections active ·{" "}
+          <a href="#" class="text-brand-blue font-semibold">See all</a>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FinancialImpactTab({ language }: { language: Language }) {
+  return (
+    <div>
+      <h2 class="text-sm font-bold text-brand-navy uppercase tracking-wider mb-1">
+        {t(language, "financial_impact_title")}
+      </h2>
+      <p class="text-xs text-gray-500 mb-3 leading-relaxed">
+        Beyond the credit itself: what this case means for your bills, fees, and credit score.
+      </p>
+
+      <div class="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100 overflow-hidden">
+        {FINANCIAL_IMPACT_DEMO.map((item, idx) => (
+          <FinancialRow key={idx} item={item} />
+        ))}
+      </div>
+
+      <div class="mt-3 bg-brand-blue-soft border border-brand-blue/20 rounded-xl p-3 flex items-start gap-3">
+        <svg class="w-5 h-5 text-brand-blue flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <div class="text-xs text-brand-navy leading-relaxed">
+          <strong>About this view.</strong> While we investigate, you may see effects on
+          autopays and balances. Anything we can fix on your behalf, we will — fees waived,
+          merchants notified, payments paused. You can also request an{" "}
+          <span class="font-semibold text-brand-blue">emergency advance</span> if you need cash sooner.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FinancialRow({ item }: { item: FinancialImpactItem }) {
+  const swatch = item.status === "good"
+    ? "bg-green-500"
+    : item.status === "watch"
+    ? "bg-amber-500"
+    : "bg-gray-300";
+  return (
+    <div class="px-4 py-2.5 flex items-start gap-3">
+      <span class={`mt-1.5 w-2 h-2 rounded-full flex-shrink-0 ${swatch}`} />
+      <div class="flex-1 min-w-0">
+        <div class="flex items-baseline justify-between gap-2">
+          <span class="text-sm font-semibold text-brand-navy">{item.label}</span>
+          {item.amount && (
+            <span
+              class={`text-sm font-bold tabular-nums flex-shrink-0 ${
+                item.status === "good" ? "text-green-700" : "text-brand-navy"
+              }`}
+            >
+              {item.amount}
+            </span>
+          )}
+        </div>
+        <p class="text-xs text-gray-500 leading-relaxed mt-0.5">{item.detail}</p>
+      </div>
+    </div>
+  );
+}
+
+function PostResolutionProtection({ language: _language }: { language: Language }) {
+  const [active, setActive] = useState<string[]>([]);
+
+  useEffect(() => {
+    setActive(loadActiveProtections());
+    const handler = () => setActive(loadActiveProtections());
+    globalThis.addEventListener(PROTECTIVE_ACTIONS_EVENT, handler);
+    return () => globalThis.removeEventListener(PROTECTIVE_ACTIONS_EVENT, handler);
+  }, []);
+
+  return (
+    <div class="bg-white border border-gray-200 rounded-xl p-4">
+      <h3 class="text-sm font-bold text-brand-navy mb-1">Stay protected going forward</h3>
+      <p class="text-xs text-gray-500 mb-3 leading-relaxed">
+        Scammers often retry the same victim within 30 days. Lock in a few protections now.
+      </p>
+      <div class="space-y-1.5">
+        {PROTECTIVE_ACTIONS.map((action) => {
+          const isOn = active.includes(action.id);
+          return (
+            <button
+              type="button"
+              key={action.id}
+              onClick={() => toggleProtection(action.id)}
+              class={`w-full flex items-center gap-3 px-3 py-2 rounded-lg border text-left transition-colors ${
+                isOn
+                  ? "bg-green-50 border-green-300"
+                  : "bg-gray-50 border-gray-200 hover:border-brand-blue/40"
+              }`}
+              aria-pressed={isOn}
+            >
+              {isOn ? (
+                <svg class="w-4 h-4 text-green-600 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              ) : (
+                <span class="w-4 h-4 rounded-full border-2 border-gray-300 flex-shrink-0" />
+              )}
+              <div class="flex-1 min-w-0">
+                <div class={`text-xs font-semibold ${isOn ? "text-green-800" : "text-brand-navy"}`}>
+                  {action.label}
+                </div>
+                <div class="text-[11px] text-gray-500">{action.description}</div>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function AccessibilityControls({
+  language,
+  textSize,
+  onLanguage,
+  onTextSize,
+}: {
+  language: Language;
+  textSize: TextSize;
+  onLanguage: (l: Language) => void;
+  onTextSize: (s: TextSize) => void;
+}) {
+  return (
+    <div class="flex items-center gap-1 text-[11px]">
+      <div class="flex items-center bg-white/10 rounded-md overflow-hidden" role="group" aria-label="Language">
+        <button
+          type="button"
+          class={`px-1.5 py-1 font-semibold transition-colors ${
+            language === "en" ? "bg-white text-brand-navy" : "text-slate-200 hover:bg-white/10"
+          }`}
+          onClick={() => onLanguage("en")}
+          aria-pressed={language === "en"}
+        >
+          EN
+        </button>
+        <button
+          type="button"
+          class={`px-1.5 py-1 font-semibold transition-colors ${
+            language === "es" ? "bg-white text-brand-navy" : "text-slate-200 hover:bg-white/10"
+          }`}
+          onClick={() => onLanguage("es")}
+          aria-pressed={language === "es"}
+        >
+          ES
+        </button>
+      </div>
+      <div class="flex items-center bg-white/10 rounded-md overflow-hidden" role="group" aria-label="Text size">
+        <button
+          type="button"
+          class={`px-1.5 py-1 font-semibold transition-colors ${
+            textSize === "normal" ? "bg-white text-brand-navy" : "text-slate-200 hover:bg-white/10"
+          }`}
+          onClick={() => onTextSize("normal")}
+          aria-pressed={textSize === "normal"}
+          title="Normal text size"
+        >
+          A
+        </button>
+        <button
+          type="button"
+          class={`px-1.5 py-1 font-bold text-sm transition-colors ${
+            textSize === "large" ? "bg-white text-brand-navy" : "text-slate-200 hover:bg-white/10"
+          }`}
+          onClick={() => onTextSize("large")}
+          aria-pressed={textSize === "large"}
+          title="Larger text size"
+        >
+          A
+        </button>
+      </div>
     </div>
   );
 }

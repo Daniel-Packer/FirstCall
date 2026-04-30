@@ -43,7 +43,7 @@ export default function DemoBar() {
           <span class="w-1.5 h-1.5 rounded-full bg-brand-blue"></span>
         </div>
         <span class="text-[10px] font-bold tracking-[0.2em] text-brand-blue uppercase flex-shrink-0">
-          Demo
+          Demo controls
         </span>
         <span class="w-px h-4 bg-white/10 flex-shrink-0" />
         <span class="text-slate-300 flex-1 truncate text-xs">
@@ -57,8 +57,9 @@ export default function DemoBar() {
                 ? "bg-brand-blue text-white"
                 : "text-slate-400 hover:text-white hover:bg-white/5"
             }`}
+            title="See the customer's view"
           >
-            Consumer
+            Customer
           </a>
           <a
             href="/bank"
@@ -67,8 +68,9 @@ export default function DemoBar() {
                 ? "bg-brand-blue text-white"
                 : "text-slate-400 hover:text-white hover:bg-white/5"
             }`}
+            title="See the bank analyst's view"
           >
-            Bank Agent
+            Analyst
           </a>
           <span class="w-px h-4 bg-white/10 mx-1" />
           <button
@@ -80,15 +82,17 @@ export default function DemoBar() {
               clearProtections();
               clearRevocations();
             }}
+            title="Send the demo back to the start — clears questions, permissions, and protections"
           >
-            Reset
+            Start over
           </button>
           <button
             class="bg-brand-blue hover:bg-brand-blue-hover disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold px-3 py-1.5 rounded-md transition-colors shadow-md shadow-brand-blue/30"
             onClick={() => stage < DEMO_STAGE_MAX && dispatch(stage + 1)}
             disabled={stage >= DEMO_STAGE_MAX}
+            title="Move the case forward one step — both views update live"
           >
-            Advance →
+            Move forward →
           </button>
         </div>
       </div>

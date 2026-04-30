@@ -354,7 +354,7 @@ function StatusTab({
                     </p>
                   ) : (
                     <p class="text-xs italic text-gray-400">
-                      This stage hasn't started yet. Estimated: {node.estimatedDays}.
+                      We haven't started this step yet. Usually takes {node.estimatedDays} once it begins.
                     </p>
                   )}
 
@@ -430,7 +430,7 @@ function NodeQA({
               ) : (
                 <div class="mt-1.5 ml-7 inline-flex items-center gap-1.5 text-[10px] text-amber-700">
                   <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                  Awaiting investigator response
+                  Waiting on a reply — usually within 1 business day
                 </div>
               )}
             </li>
@@ -448,10 +448,10 @@ function NodeQA({
           <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
         </svg>
         {expanded
-          ? "Cancel"
+          ? "Never mind"
           : hasQuestions
-          ? `Ask another question${pendingCount ? ` · ${pendingCount} awaiting reply` : ""}`
-          : "Ask a question about this stage"}
+          ? `Ask another question${pendingCount ? ` · ${pendingCount} waiting for a reply` : ""}`
+          : "Ask the investigator about this step"}
       </button>
 
       {expanded && (
@@ -462,7 +462,7 @@ function NodeQA({
           <textarea
             class="w-full text-xs bg-white border border-gray-200 rounded-md px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent resize-none"
             rows={2}
-            placeholder="What would you like to know?"
+            placeholder="What's confusing? What's worrying you? Plain language is fine."
             value={draft}
             onInput={(e) => setDraft((e.target as HTMLTextAreaElement).value)}
           />
@@ -482,7 +482,7 @@ function NodeQA({
               disabled={!draft.trim()}
               class="text-[11px] font-semibold bg-brand-blue hover:bg-brand-blue-hover disabled:opacity-40 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-md transition-colors"
             >
-              Send to investigator
+              Send my question
             </button>
           </div>
         </form>
@@ -546,8 +546,9 @@ function PermissionsTab({ language }: { language: Language }) {
         {t(language, "information_access")}
       </h2>
       <p class="text-xs text-gray-500 mb-3 leading-relaxed">
-        Real control: revoke any permission instantly, narrow the scope, and see exactly when your data
-        was accessed. Permissions auto-expire 60 days after your case closes.
+        These are the only things we'll look at while we work your case — nothing else.
+        You can take any of them back right now (no phone call required), and everything
+        you've allowed expires automatically 60 days after the case closes.
       </p>
 
       <div class="space-y-2">
@@ -601,28 +602,28 @@ function PermissionsTab({ language }: { language: Language }) {
                       {isRevoked
                         ? t(language, "revoked")
                         : effectiveStatus === "granted"
-                        ? "Granted"
+                        ? "You allowed this"
                         : effectiveStatus === "denied"
-                        ? "Denied"
-                        : "Awaiting your decision"}
+                        ? "You said no"
+                        : "Waiting on you"}
                     </span>
                   </div>
                   <p class="text-xs text-gray-500 mt-1 leading-relaxed">{perm.description}</p>
                   {effectiveStatus === "granted" && !isRevoked && perm.grantedAt && (
                     <div class="flex items-center justify-between gap-2 mt-1.5 text-[11px]">
-                      <span class="text-green-700">Granted {perm.grantedAt}</span>
+                      <span class="text-green-700">Allowed {perm.grantedAt}</span>
                       <span class="text-gray-400">
-                        {t(language, "expires")} 60 days after case close
+                        {t(language, "expires")} 60 days after the case closes
                       </span>
                     </div>
                   )}
                   {isRevoked && (
                     <p class="text-[11px] text-gray-500 mt-1">
-                      You revoked access. The bank can no longer use this data.
+                      You took this back. We can't use it anymore.
                     </p>
                   )}
                   {effectiveStatus === "denied" && !isRevoked && (
-                    <p class="text-[11px] text-gray-400 mt-1">Not granted by you</p>
+                    <p class="text-[11px] text-gray-400 mt-1">You said no to this one</p>
                   )}
                   {effectiveStatus === "pending" && (
                     <div class="flex gap-2 mt-2">
@@ -648,14 +649,14 @@ function PermissionsTab({ language }: { language: Language }) {
                         onClick={() => {
                           if (
                             confirm(
-                              "Revoke this permission? The bank will lose access immediately, which may slow your case.",
+                              "Take this back? We'll stop using this data right away. That may slow the investigation, but your case will keep going with whatever else you've allowed.",
                             )
                           ) {
                             revokePermission(perm.id);
                           }
                         }}
                       >
-                        {t(language, "revoke")} access
+                        Take this back
                       </button>
                     </div>
                   )}
@@ -677,7 +678,7 @@ function PermissionsTab({ language }: { language: Language }) {
             {t(language, "access_log_title")}
           </div>
           <div class="text-[11px] text-gray-500">
-            {ACCESS_LOG_DEMO.length} access events on file
+            {ACCESS_LOG_DEMO.length} times so far — see who, when, and exactly what
           </div>
         </div>
         <svg
@@ -752,10 +753,11 @@ function ResolutionTab({
             />
           </svg>
         </div>
-        <h2 class="text-xl font-bold text-brand-navy mb-2 tracking-tight">Resolution Accepted</h2>
+        <h2 class="text-xl font-bold text-brand-navy mb-2 tracking-tight">All set.</h2>
         <p class="text-sm text-gray-500 max-w-sm mx-auto leading-relaxed mb-5">
-          Thank you for confirming. Case #{DEMO_CASE.id} is now closed. The credit of{" "}
-          {DEMO_CASE.amount} will appear in your account within 1–2 business days.
+          Case #{DEMO_CASE.id} is closed. Your {DEMO_CASE.amount} is back, and we'll
+          mail a written summary within 5 business days. Below are a few things to
+          do so this doesn't happen again.
         </p>
         <div class="max-w-md mx-auto text-left">
           <PostResolutionProtection language={language} />
@@ -782,9 +784,10 @@ function ResolutionTab({
             />
           </svg>
         </div>
-        <h2 class="text-xl font-bold text-brand-navy mb-2 tracking-tight">Dispute Submitted</h2>
+        <h2 class="text-xl font-bold text-brand-navy mb-2 tracking-tight">We hear you.</h2>
         <p class="text-sm text-gray-500 max-w-sm mx-auto leading-relaxed mb-5">
-          A fraud specialist will review your dispute and respond within 5 business days.
+          A fraud specialist will look at your dispute and reply within 5 business
+          days. Your case stays open in the meantime — nothing has been finalized.
         </p>
         <div class="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-left max-w-sm mx-auto">
           <div class="text-xs font-semibold text-amber-700 mb-1 uppercase tracking-wide">
@@ -801,7 +804,7 @@ function ResolutionTab({
 
   return (
     <div>
-      <h2 class="text-base font-semibold text-brand-navy mb-1">Your Case Has Been Resolved</h2>
+      <h2 class="text-base font-semibold text-brand-navy mb-1">We're done. Your money is back.</h2>
 
       <div class="bg-green-50 border border-green-200 rounded-xl p-5 my-4">
         <div class="flex items-start gap-3">
@@ -822,7 +825,7 @@ function ResolutionTab({
           </div>
           <div>
             <div class="font-semibold text-green-900 text-sm mb-1">
-              Fraud Confirmed — Full Credit of {DEMO_CASE.amount} Issued
+              We confirmed it was fraud · {DEMO_CASE.amount} credited
             </div>
             <p class="text-xs text-green-800 leading-relaxed">{resolutionMessage}</p>
           </div>
@@ -859,46 +862,46 @@ function ResolutionTab({
             class="flex-1 bg-brand-blue hover:bg-brand-blue-hover text-white font-semibold py-3 px-5 rounded-xl transition-all text-sm shadow-lg shadow-brand-blue/25 hover:-translate-y-0.5"
             onClick={() => setAccepted(true)}
           >
-            Accept Resolution
+            Looks right — close my case
           </button>
           <button
             class="flex-1 bg-white hover:bg-gray-50 text-gray-700 font-semibold py-3 px-5 rounded-xl border border-gray-300 transition-colors text-sm"
             onClick={() => setShowDisputeForm(true)}
           >
-            Dispute This Decision
+            Something's off — reopen
           </button>
         </div>
       ) : (
         <div class="bg-white border border-gray-200 rounded-xl p-5 brand-card-shadow">
-          <h3 class="font-semibold text-brand-navy mb-4 text-sm">Submit a Dispute</h3>
+          <h3 class="font-semibold text-brand-navy mb-4 text-sm">Tell us what's off</h3>
 
           <div class="mb-4">
             <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
-              Reason for Dispute
+              What's the issue?
             </label>
             <select
               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white"
               value={disputeReason}
               onChange={(e) => setDisputeReason((e.target as HTMLSelectElement).value)}
             >
-              <option value="">Select a reason...</option>
-              <option value="Incorrect amount credited">Incorrect amount credited</option>
-              <option value="Fraud not fully acknowledged">Fraud not fully acknowledged</option>
-              <option value="Missing transactions not addressed">
-                Missing transactions not addressed
+              <option value="">Pick the closest one...</option>
+              <option value="Credit amount is wrong">The credited amount is wrong</option>
+              <option value="Decision missed part of the fraud">The decision missed part of the fraud</option>
+              <option value="Other transactions weren't addressed">
+                Other transactions I reported weren't addressed
               </option>
-              <option value="Other">Other</option>
+              <option value="Other">Something else</option>
             </select>
           </div>
 
           <div class="mb-5">
             <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">
-              Additional Details
+              More detail (optional but helpful)
             </label>
             <textarea
               class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
               rows={4}
-              placeholder="Explain why you are disputing this resolution..."
+              placeholder="What did we get wrong, and what would make it right?"
               value={disputeText}
               onInput={(e) => setDisputeText((e.target as HTMLTextAreaElement).value)}
             />
@@ -910,7 +913,7 @@ function ResolutionTab({
               disabled={!disputeReason}
               onClick={() => setDisputeSubmitted(true)}
             >
-              Submit Dispute
+              Reopen my case
             </button>
             <button
               class="text-sm text-gray-400 hover:text-gray-600 px-2 transition-colors"
@@ -1048,7 +1051,9 @@ function FinancialImpactTab({ language }: { language: Language }) {
         {t(language, "financial_impact_title")}
       </h2>
       <p class="text-xs text-gray-500 mb-3 leading-relaxed">
-        Beyond the credit itself: what this case means for your bills, fees, and credit score.
+        $2,847 leaving your account doesn't just affect your balance. Here's what we're
+        doing about the rest of it — fees, autopays, your credit score — so you don't
+        have to chase any of it down.
       </p>
 
       <div class="bg-white border border-gray-200 rounded-xl divide-y divide-gray-100 overflow-hidden">
@@ -1062,10 +1067,10 @@ function FinancialImpactTab({ language }: { language: Language }) {
           <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <div class="text-xs text-brand-navy leading-relaxed">
-          <strong>About this view.</strong> While we investigate, you may see effects on
-          autopays and balances. Anything we can fix on your behalf, we will — fees waived,
-          merchants notified, payments paused. You can also request an{" "}
-          <span class="font-semibold text-brand-blue">emergency advance</span> if you need cash sooner.
+          <strong>You don't have to wait for the credit.</strong> If rent or a bill is
+          due before this clears, you can request a fee-free{" "}
+          <span class="font-semibold text-brand-blue">emergency advance up to $500</span>{" "}
+          right now and we'll deduct it from the credit when it lands.
         </div>
       </div>
     </div>
@@ -1112,9 +1117,10 @@ function PostResolutionProtection({ language: _language }: { language: Language 
 
   return (
     <div class="bg-white border border-gray-200 rounded-xl p-4">
-      <h3 class="text-sm font-bold text-brand-navy mb-1">Stay protected going forward</h3>
+      <h3 class="text-sm font-bold text-brand-navy mb-1">Make sure this doesn't happen again</h3>
       <p class="text-xs text-gray-500 mb-3 leading-relaxed">
-        Scammers often retry the same victim within 30 days. Lock in a few protections now.
+        The same scammers come back to roughly 1 in 4 victims within 30 days. A
+        couple of clicks here makes that a lot harder.
       </p>
       <div class="space-y-1.5">
         {PROTECTIVE_ACTIONS.map((action) => {

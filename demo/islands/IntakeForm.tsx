@@ -165,10 +165,12 @@ export default function IntakeForm() {
         <div class="mb-6">
           <div class="flex items-start justify-between gap-4">
             <div>
-              <h1 class="text-2xl font-bold text-brand-navy tracking-tight">Report Fraudulent Activity</h1>
+              <h1 class="text-2xl font-bold text-brand-navy tracking-tight">Tell us what happened</h1>
               <p class="text-sm text-gray-500 mt-1 leading-relaxed">
-                Tell us about the transaction(s) you didn't authorize. Your case will be assigned a
-                number and you'll receive a confirmation by email and text.
+                You'll get a case number right away and a confirmation by email and
+                text. A fraud specialist reviews your claim within 1–2 business days,
+                and federal law requires us to finish within 45 business days. You won't
+                pay for any fraud we confirm.
               </p>
             </div>
             <button
@@ -186,7 +188,9 @@ export default function IntakeForm() {
           <div class="bg-white rounded-xl border border-gray-200 p-5 mb-4 brand-card-shadow">
             <div class="flex items-center justify-between mb-4">
               <h2 class="font-semibold text-brand-navy">
-                {isBulk ? `Fraudulent Transactions (${rows.length})` : "Fraudulent Transaction"}
+                {isBulk
+                  ? `Transactions you didn't authorize (${rows.length})`
+                  : "The transaction you didn't authorize"}
               </h2>
               {isBulk && totalAmount > 0 && (
                 <span class="text-sm font-semibold text-red-600">
@@ -238,11 +242,12 @@ export default function IntakeForm() {
                 />
                 <div>
                   <span class="text-sm font-medium text-gray-800">
-                    There are many other fraudulent transactions
+                    There are more I haven't listed
                   </span>
                   <p class="text-xs text-gray-500 mt-0.5">
-                    Check this if the listed transactions are only examples — your investigator
-                    will follow up to gather the full list.
+                    Use this if the rows above are just examples. Your investigator
+                    will call you to walk through the rest — you don't have to list
+                    them all here.
                   </p>
                 </div>
               </label>
@@ -258,9 +263,9 @@ export default function IntakeForm() {
               aria-expanded={formExpanded}
             >
               <div>
-                <h2 class="font-semibold text-brand-navy">Add more details</h2>
+                <h2 class="font-semibold text-brand-navy">Anything else we should know?</h2>
                 <p class="text-xs text-gray-500 mt-0.5">
-                  Optional — describe what happened or attach a police report number
+                  Optional. Tell us how you noticed, or add a police report number if you have one.
                 </p>
               </div>
               <svg
@@ -276,11 +281,11 @@ export default function IntakeForm() {
             {formExpanded && (
               <div class="px-5 pb-5 border-t border-gray-100 pt-4 space-y-5">
                 <div>
-                  <label class={LABEL}>Describe the fraud in your own words</label>
+                  <label class={LABEL}>What happened, in your own words</label>
                   <textarea
                     class={INPUT}
                     rows={4}
-                    placeholder="Explain what happened — how you discovered the transaction, any communications you received, etc."
+                    placeholder="How did you notice? Did anyone call or email you? Anything you remember helps the investigator understand the case."
                     value={description}
                     onInput={(e) => setDescription((e.target as HTMLTextAreaElement).value)}
                   />
@@ -327,7 +332,11 @@ export default function IntakeForm() {
             <svg class="w-5 h-5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
             </svg>
-            <span>Supporting documents (screenshots, statements, police reports) can be uploaded after your claim is submitted.</span>
+            <span>
+              Have screenshots, statements, or a police report? You'll be able to
+              upload them right after you submit — don't worry about gathering
+              everything now.
+            </span>
           </div>
 
           {/* ── High-priority notice ── */}
@@ -337,9 +346,11 @@ export default function IntakeForm() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
               <div class="text-sm">
-                <strong class="text-amber-800">High Priority — Pending Transaction Detected</strong>
+                <strong class="text-amber-800">We're putting this at the front of the queue</strong>
                 <p class="text-amber-700 mt-0.5">
-                  One or more transactions you marked as pending may still be cancellable. Your case will be escalated immediately upon submission.
+                  You marked at least one transaction as still pending. Pending
+                  transactions can sometimes be cancelled before the money leaves —
+                  so your case jumps to the top as soon as you submit.
                 </p>
               </div>
             </div>
@@ -350,12 +361,13 @@ export default function IntakeForm() {
             type="submit"
             class="w-full bg-brand-blue hover:bg-brand-blue-hover text-white font-semibold py-3.5 px-6 rounded-xl transition-all text-base shadow-lg shadow-brand-blue/25 hover:shadow-xl hover:shadow-brand-blue/30 hover:-translate-y-0.5"
           >
-            Submit Fraud Claim
+            Submit my claim
           </button>
 
           <p class="mt-3 text-xs text-gray-400 text-center leading-relaxed">
-            By submitting you confirm that the information above is accurate to the best of your knowledge.
-            A fraud specialist will review your claim within 1–2 business days.
+            By submitting, you're saying the information here is true to the best of
+            your knowledge. A fraud specialist reviews every claim within 1–2 business
+            days, and you can ask questions on any stage of your case.
           </p>
         </form>
       </div>
@@ -653,12 +665,12 @@ function Confirmation({
           </div>
           <div class="flex-1 min-w-0">
             <div class="font-semibold text-gray-900 text-sm">
-              Claim Submitted · #{DEMO_CASE.id}
+              Your claim is in. Case #{DEMO_CASE.id}.
             </div>
             <div class="text-xs text-gray-500 truncate">
               ${totalAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               {isBulk ? ` · ${rows.length} transactions` : ` · ${TXN_TYPES.find((t) => t.value === rows[0].type)?.label ?? rows[0].type}`}
-              {" · "}Reg E by {DEMO_CASE.regEDeadline}
+              {" · "}Decision due by {DEMO_CASE.regEDeadline}
             </div>
           </div>
         </div>
@@ -667,12 +679,14 @@ function Confirmation({
           <div class="mb-3 space-y-1.5">
             {hasAnyPending && (
               <div class="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-800">
-                <strong>High Priority</strong> — pending transaction escalates this case.
+                <strong>Front of the queue.</strong> One of your transactions is still
+                pending, so we're trying to cancel it before the money moves.
               </div>
             )}
             {manyOthers && (
               <div class="bg-brand-blue-soft border border-brand-blue/30 rounded-lg px-3 py-2 text-xs text-brand-navy">
-                <strong>More transactions noted</strong> — your investigator will follow up.
+                <strong>We'll call you.</strong> You said there are more transactions
+                we should know about — your investigator will reach out to walk through them.
               </div>
             )}
           </div>
@@ -683,10 +697,11 @@ function Confirmation({
           <div class="flex items-center justify-between gap-3 mb-2">
             <div class="min-w-0">
               <h3 class="font-semibold text-brand-navy text-sm leading-tight">
-                Grant Information Access
+                What can we look at?
               </h3>
               <p class="text-xs text-gray-500 leading-tight mt-0.5">
-                Allow the bank to investigate your claim
+                We can only investigate what you let us see. Pick what you're
+                comfortable with — you can change your mind later.
               </p>
             </div>
             <button
@@ -694,7 +709,7 @@ function Confirmation({
               class="flex-shrink-0 text-xs text-brand-blue hover:text-brand-blue-hover font-semibold whitespace-nowrap"
               onClick={grantAll}
             >
-              Grant all
+              Allow all
             </button>
           </div>
 
@@ -757,8 +772,8 @@ function Confirmation({
 
           <p class="mt-2 text-xs text-gray-400 text-right">
             {allDecided
-              ? `${grantedCount} of ${INITIAL_PERMISSIONS.length} granted`
-              : `${totalDecided} of ${INITIAL_PERMISSIONS.length} decided`}
+              ? `${grantedCount} of ${INITIAL_PERMISSIONS.length} allowed`
+              : `${totalDecided} of ${INITIAL_PERMISSIONS.length} answered`}
           </p>
         </div>
 
@@ -770,12 +785,12 @@ function Confirmation({
               : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
           }`}
         >
-          {allDecided ? "View Case Status →" : "Skip — view case status"}
+          {allDecided ? "See where my case stands →" : "Skip for now — see my case"}
         </a>
 
         <div class="mt-2 text-center">
           <a href="/consumer/intake" class="text-xs text-gray-400 hover:text-gray-600 transition-colors">
-            Report another claim
+            File another claim
           </a>
         </div>
       </div>

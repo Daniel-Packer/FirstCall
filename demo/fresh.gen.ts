@@ -7,12 +7,14 @@ import * as $_app from "./routes/_app.tsx";
 import * as $api_joke from "./routes/api/joke.ts";
 import * as $bank_index from "./routes/bank/index.tsx";
 import * as $consumer_index from "./routes/consumer/index.tsx";
+import * as $consumer_intake from "./routes/consumer/intake.tsx";
 import * as $greet_name_ from "./routes/greet/[name].tsx";
 import * as $index from "./routes/index.tsx";
 import * as $BankPortal from "./islands/BankPortal.tsx";
 import * as $ConsumerPortal from "./islands/ConsumerPortal.tsx";
 import * as $Counter from "./islands/Counter.tsx";
 import * as $DemoBar from "./islands/DemoBar.tsx";
+import * as $IntakeForm from "./islands/IntakeForm.tsx";
 import type { Manifest } from "$fresh/server.ts";
 
 const manifest = {
@@ -22,6 +24,7 @@ const manifest = {
     "./routes/api/joke.ts": $api_joke,
     "./routes/bank/index.tsx": $bank_index,
     "./routes/consumer/index.tsx": $consumer_index,
+    "./routes/consumer/intake.tsx": $consumer_intake,
     "./routes/greet/[name].tsx": $greet_name_,
     "./routes/index.tsx": $index,
   },
@@ -30,6 +33,7 @@ const manifest = {
     "./islands/ConsumerPortal.tsx": $ConsumerPortal,
     "./islands/Counter.tsx": $Counter,
     "./islands/DemoBar.tsx": $DemoBar,
+    "./islands/IntakeForm.tsx": $IntakeForm,
   },
   baseUrl: import.meta.url,
 } satisfies Manifest;

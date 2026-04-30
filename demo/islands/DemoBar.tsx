@@ -1,5 +1,6 @@
 import { useEffect, useState } from "preact/hooks";
 import {
+  clearPermissionDecisions,
   DEMO_STAGE_DEFAULT,
   DEMO_STAGE_MAX,
   LOCALSTORAGE_KEY,
@@ -31,44 +32,53 @@ export default function DemoBar() {
   };
 
   return (
-    <div class="fixed bottom-0 left-0 right-0 z-50 bg-gray-950 border-t border-gray-800 text-white">
-      <div class="max-w-5xl mx-auto px-4 py-2 flex items-center gap-3 text-sm">
-        <span class="text-xs font-mono font-bold tracking-widest text-gray-500 uppercase flex-shrink-0">
-          DEMO
+    <div class="fixed bottom-0 left-0 right-0 z-50 bg-brand-navy border-t border-brand-blue/30 text-white shadow-[0_-8px_24px_-8px_rgba(10,18,36,0.4)]">
+      <div class="max-w-5xl mx-auto px-4 py-2.5 flex items-center gap-3 text-sm">
+        <div class="flex items-center gap-1.5 flex-shrink-0">
+          <span class="w-1.5 h-1.5 rounded-full bg-brand-blue"></span>
+          <span class="w-1.5 h-1.5 rounded-full bg-brand-blue"></span>
+          <span class="w-1.5 h-1.5 rounded-full bg-brand-blue"></span>
+        </div>
+        <span class="text-[10px] font-bold tracking-[0.2em] text-brand-blue uppercase flex-shrink-0">
+          Demo
         </span>
-        <span class="text-gray-300 flex-1 truncate text-xs">
+        <span class="w-px h-4 bg-white/10 flex-shrink-0" />
+        <span class="text-slate-300 flex-1 truncate text-xs">
           {STAGE_LABELS[stage] ?? `Stage ${stage}`}
         </span>
         <div class="flex items-center gap-1.5 flex-shrink-0">
           <a
             href="/consumer"
-            class={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+            class={`px-2.5 py-1 rounded-md text-xs font-semibold transition-colors ${
               path === "/consumer"
-                ? "bg-blue-600 text-white"
-                : "text-gray-400 hover:text-white hover:bg-gray-800"
+                ? "bg-brand-blue text-white"
+                : "text-slate-400 hover:text-white hover:bg-white/5"
             }`}
           >
             Consumer
           </a>
           <a
             href="/bank"
-            class={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${
+            class={`px-2.5 py-1 rounded-md text-xs font-semibold transition-colors ${
               path === "/bank"
-                ? "bg-blue-600 text-white"
-                : "text-gray-400 hover:text-white hover:bg-gray-800"
+                ? "bg-brand-blue text-white"
+                : "text-slate-400 hover:text-white hover:bg-white/5"
             }`}
           >
             Bank Agent
           </a>
-          <span class="w-px h-4 bg-gray-700 mx-1" />
+          <span class="w-px h-4 bg-white/10 mx-1" />
           <button
-            class="text-xs text-gray-500 hover:text-gray-300 px-2 py-1 transition-colors"
-            onClick={() => dispatch(DEMO_STAGE_DEFAULT)}
+            class="text-xs text-slate-400 hover:text-white px-2 py-1 transition-colors"
+            onClick={() => {
+              dispatch(DEMO_STAGE_DEFAULT);
+              clearPermissionDecisions();
+            }}
           >
             Reset
           </button>
           <button
-            class="bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold px-3 py-1.5 rounded transition-colors"
+            class="bg-brand-blue hover:bg-brand-blue-hover disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold px-3 py-1.5 rounded-md transition-colors shadow-md shadow-brand-blue/30"
             onClick={() => stage < DEMO_STAGE_MAX && dispatch(stage + 1)}
             disabled={stage >= DEMO_STAGE_MAX}
           >

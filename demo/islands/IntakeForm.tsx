@@ -1,5 +1,11 @@
 import { useState } from "preact/hooks";
-import { DEMO_CASE } from "../lib/demoData.ts";
+import {
+  DEMO_CASE,
+  formatDecidedAt,
+  INITIAL_PERMISSIONS,
+  loadPermissionDecisions,
+  savePermissionDecisions,
+} from "../lib/demoData.ts";
 
 type MerchantContact = "yes" | "no" | "na";
 
@@ -47,7 +53,7 @@ const TXN_TYPES = [
 
 const LABEL = "block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1";
 const INPUT =
-  "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent";
+  "w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent transition-shadow";
 
 export default function IntakeForm() {
   const [rows, setRows] = useState<TxnRow[]>([mkRow()]);
@@ -56,6 +62,16 @@ export default function IntakeForm() {
   const [policeReportNumber, setPoliceReportNumber] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [formExpanded, setFormExpanded] = useState(false);
+  const [manyOthers, setManyOthers] = useState(false);
+
+  const toggleRowExpand = (id: string) =>
+    setExpandedRows((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
 
   const isBulk = rows.length > 1;
   const hasAnyPending = rows.some((r) => r.isPending);
@@ -67,16 +83,26 @@ export default function IntakeForm() {
   const updateRow = (id: string, patch: Partial<TxnRow>) =>
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
 
-  const removeRow = (id: string) => setRows((prev) => prev.filter((r) => r.id !== id));
+  const removeRow = (id: string) => {
+    setRows((prev) => prev.filter((r) => r.id !== id));
+    setExpandedRows((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+  };
 
   const addRow = () => setRows((prev) => [...prev, mkRow()]);
 
   const fillDemo = () => {
-    setRows([{ ...DEMO_ROW, id: rows[0].id }]);
+    const rowId = rows[0].id;
+    setRows([{ ...DEMO_ROW, id: rowId }]);
     setDescription(DEMO_CASE.description);
     setPoliceReport(true);
     setPoliceReportNumber(DEMO_CASE.policeReport);
     setErrors({});
+    setExpandedRows(new Set([rowId]));
+    setFormExpanded(true);
   };
 
   const validate = () => {
@@ -87,7 +113,6 @@ export default function IntakeForm() {
       if (!r.amount || isNaN(parseFloat(r.amount))) errs[`${prefix}amount`] = "Enter a valid amount";
       if (!r.merchant.trim()) errs[`${prefix}merchant`] = "Required";
     });
-    if (!description.trim()) errs["description"] = "Please describe what happened";
     if (policeReport && !policeReportNumber.trim()) errs["policeReportNumber"] = "Enter the report number";
     return errs;
   };
@@ -103,21 +128,34 @@ export default function IntakeForm() {
   };
 
   if (submitted) {
-    return <Confirmation isBulk={isBulk} rows={rows} totalAmount={totalAmount} hasAnyPending={hasAnyPending} />;
+    return (
+      <Confirmation
+        isBulk={isBulk}
+        rows={rows}
+        totalAmount={totalAmount}
+        hasAnyPending={hasAnyPending}
+        manyOthers={manyOthers}
+      />
+    );
   }
 
   return (
-    <div class="min-h-screen bg-slate-50 pb-24">
+    <div class="min-h-screen bg-brand-slate pb-24">
       {/* Bank header */}
-      <header class="bg-blue-900 text-white px-4 py-4">
+      <header class="bg-brand-navy text-white px-4 py-4 border-b-2 border-brand-blue/40">
         <div class="max-w-2xl mx-auto flex items-center justify-between">
-          <div>
-            <div class="font-bold text-base">First Community Bank</div>
-            <div class="text-blue-200 text-xs">Fraud Claim Portal</div>
+          <div class="flex items-center gap-3">
+            <div class="bg-white rounded-lg p-1.5">
+              <img src="/firstcall-logo.png" alt="FirstCall" class="h-6 w-auto" />
+            </div>
+            <div>
+              <div class="font-semibold text-sm leading-tight">First Community Bank</div>
+              <div class="text-slate-300 text-[11px]">Fraud Claim Portal · ClearPath</div>
+            </div>
           </div>
           <div class="text-right text-sm">
             <div class="font-medium">{DEMO_CASE.consumer.name}</div>
-            <div class="text-blue-200 text-xs">Account ••••{DEMO_CASE.consumer.accountEnding}</div>
+            <div class="text-slate-400 text-xs">Account ••••{DEMO_CASE.consumer.accountEnding}</div>
           </div>
         </div>
       </header>
@@ -127,7 +165,7 @@ export default function IntakeForm() {
         <div class="mb-6">
           <div class="flex items-start justify-between gap-4">
             <div>
-              <h1 class="text-xl font-bold text-gray-900">Report Fraudulent Activity</h1>
+              <h1 class="text-2xl font-bold text-brand-navy tracking-tight">Report Fraudulent Activity</h1>
               <p class="text-sm text-gray-500 mt-1 leading-relaxed">
                 Tell us about the transaction(s) you didn't authorize. Your case will be assigned a
                 number and you'll receive a confirmation by email and text.
@@ -135,7 +173,7 @@ export default function IntakeForm() {
             </div>
             <button
               type="button"
-              class="flex-shrink-0 text-xs text-blue-600 hover:text-blue-800 border border-blue-200 hover:border-blue-400 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition-colors font-medium"
+              class="flex-shrink-0 text-xs text-brand-blue hover:text-brand-blue-hover border border-brand-blue/30 hover:border-brand-blue bg-brand-blue-soft hover:bg-brand-blue-soft/70 px-3 py-1.5 rounded-lg transition-colors font-semibold"
               onClick={fillDemo}
             >
               Fill demo data
@@ -145,9 +183,9 @@ export default function IntakeForm() {
 
         <form onSubmit={handleSubmit} noValidate>
           {/* ── Transaction(s) section ── */}
-          <div class="bg-white rounded-xl border border-gray-200 p-5 mb-4">
+          <div class="bg-white rounded-xl border border-gray-200 p-5 mb-4 brand-card-shadow">
             <div class="flex items-center justify-between mb-4">
-              <h2 class="font-semibold text-gray-900">
+              <h2 class="font-semibold text-brand-navy">
                 {isBulk ? `Fraudulent Transactions (${rows.length})` : "Fraudulent Transaction"}
               </h2>
               {isBulk && totalAmount > 0 && (
@@ -165,78 +203,121 @@ export default function IntakeForm() {
                   index={i}
                   isBulk={isBulk}
                   errors={errors}
+                  expanded={expandedRows.has(row.id)}
+                  onToggleExpand={() => toggleRowExpand(row.id)}
                   onChange={(patch) => updateRow(row.id, patch)}
                   onRemove={rows.length > 1 ? () => removeRow(row.id) : undefined}
                 />
               ))}
             </div>
 
-            <button
-              type="button"
-              class="mt-4 text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1.5 transition-colors"
-              onClick={addRow}
-            >
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Add another transaction
-            </button>
-          </div>
+            <div class="mt-4 flex flex-col gap-3">
+              <button
+                type="button"
+                class="self-start text-sm text-brand-blue hover:text-brand-blue-hover font-semibold flex items-center gap-1.5 transition-colors"
+                onClick={addRow}
+              >
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add another transaction
+              </button>
 
-          {/* ── Description section ── */}
-          <div class="bg-white rounded-xl border border-gray-200 p-5 mb-4">
-            <h2 class="font-semibold text-gray-900 mb-3">What Happened</h2>
-            <div>
-              <label class={LABEL}>
-                Describe the fraud in your own words <span class="text-red-500 normal-case">*</span>
+              <label
+                class={`flex items-start gap-2.5 cursor-pointer select-none p-3 rounded-lg border transition-colors ${
+                  manyOthers
+                    ? "bg-brand-blue-soft border-brand-blue/30"
+                    : "bg-gray-50 border-gray-100 hover:border-gray-200"
+                }`}
+              >
+                <input
+                  type="checkbox"
+                  class="w-4 h-4 rounded border-gray-300 text-brand-blue mt-0.5 accent-brand-blue"
+                  checked={manyOthers}
+                  onChange={(e) => setManyOthers((e.target as HTMLInputElement).checked)}
+                />
+                <div>
+                  <span class="text-sm font-medium text-gray-800">
+                    There are many other fraudulent transactions
+                  </span>
+                  <p class="text-xs text-gray-500 mt-0.5">
+                    Check this if the listed transactions are only examples — your investigator
+                    will follow up to gather the full list.
+                  </p>
+                </div>
               </label>
-              <textarea
-                class={`${INPUT} ${errors.description ? "border-red-400 ring-1 ring-red-400" : ""}`}
-                rows={4}
-                placeholder="Explain what happened — how you discovered the transaction, any communications you received, etc."
-                value={description}
-                onInput={(e) => {
-                  setDescription((e.target as HTMLTextAreaElement).value);
-                  setErrors((prev) => ({ ...prev, description: "" }));
-                }}
-              />
-              {errors.description && (
-                <p class="mt-1 text-xs text-red-500">{errors.description}</p>
-              )}
             </div>
           </div>
 
-          {/* ── Police report section ── */}
-          <div class="bg-white rounded-xl border border-gray-200 p-5 mb-4">
-            <h2 class="font-semibold text-gray-900 mb-3">Police Report</h2>
-            <label class="flex items-center gap-2.5 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                class="w-4 h-4 rounded border-gray-300 text-blue-600"
-                checked={policeReport}
-                onChange={(e) => setPoliceReport((e.target as HTMLInputElement).checked)}
-              />
-              <span class="text-sm text-gray-700">I have filed a police report for this fraud</span>
-            </label>
+          {/* ── Optional extras (collapsible) ── */}
+          <div class="bg-white rounded-xl border border-gray-200 mb-4 overflow-hidden brand-card-shadow">
+            <button
+              type="button"
+              class="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-gray-50 transition-colors"
+              onClick={() => setFormExpanded((v) => !v)}
+              aria-expanded={formExpanded}
+            >
+              <div>
+                <h2 class="font-semibold text-brand-navy">Add more details</h2>
+                <p class="text-xs text-gray-500 mt-0.5">
+                  Optional — describe what happened or attach a police report number
+                </p>
+              </div>
+              <svg
+                class={`w-5 h-5 text-gray-400 transition-transform ${formExpanded ? "rotate-180" : ""}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
 
-            {policeReport && (
-              <div class="mt-3 pl-6">
-                <label class={LABEL}>
-                  Report Number <span class="text-red-500 normal-case">*</span>
-                </label>
-                <input
-                  type="text"
-                  class={`${INPUT} max-w-xs ${errors.policeReportNumber ? "border-red-400 ring-1 ring-red-400" : ""}`}
-                  placeholder="e.g. RPT-2026-44892"
-                  value={policeReportNumber}
-                  onInput={(e) => {
-                    setPoliceReportNumber((e.target as HTMLInputElement).value);
-                    setErrors((prev) => ({ ...prev, policeReportNumber: "" }));
-                  }}
-                />
-                {errors.policeReportNumber && (
-                  <p class="mt-1 text-xs text-red-500">{errors.policeReportNumber}</p>
-                )}
+            {formExpanded && (
+              <div class="px-5 pb-5 border-t border-gray-100 pt-4 space-y-5">
+                <div>
+                  <label class={LABEL}>Describe the fraud in your own words</label>
+                  <textarea
+                    class={INPUT}
+                    rows={4}
+                    placeholder="Explain what happened — how you discovered the transaction, any communications you received, etc."
+                    value={description}
+                    onInput={(e) => setDescription((e.target as HTMLTextAreaElement).value)}
+                  />
+                </div>
+
+                <div>
+                  <label class="flex items-center gap-2.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      class="w-4 h-4 rounded border-gray-300 accent-brand-blue"
+                      checked={policeReport}
+                      onChange={(e) => setPoliceReport((e.target as HTMLInputElement).checked)}
+                    />
+                    <span class="text-sm text-gray-700">I have filed a police report for this fraud</span>
+                  </label>
+
+                  {policeReport && (
+                    <div class="mt-3 pl-6">
+                      <label class={LABEL}>
+                        Report Number <span class="text-red-500 normal-case">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        class={`${INPUT} max-w-xs ${errors.policeReportNumber ? "border-red-400 ring-1 ring-red-400" : ""}`}
+                        placeholder="e.g. RPT-2026-44892"
+                        value={policeReportNumber}
+                        onInput={(e) => {
+                          setPoliceReportNumber((e.target as HTMLInputElement).value);
+                          setErrors((prev) => ({ ...prev, policeReportNumber: "" }));
+                        }}
+                      />
+                      {errors.policeReportNumber && (
+                        <p class="mt-1 text-xs text-red-500">{errors.policeReportNumber}</p>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -267,7 +348,7 @@ export default function IntakeForm() {
           {/* ── Submit ── */}
           <button
             type="submit"
-            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-6 rounded-xl transition-colors text-base"
+            class="w-full bg-brand-blue hover:bg-brand-blue-hover text-white font-semibold py-3.5 px-6 rounded-xl transition-all text-base shadow-lg shadow-brand-blue/25 hover:shadow-xl hover:shadow-brand-blue/30 hover:-translate-y-0.5"
           >
             Submit Fraud Claim
           </button>
@@ -281,9 +362,9 @@ export default function IntakeForm() {
 
       {/* Support footer */}
       <div class="max-w-2xl mx-auto px-4 pb-4">
-        <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center text-xs text-gray-500">
+        <div class="bg-white border border-gray-200 rounded-lg p-3 text-center text-xs text-gray-500">
           Need help?{" "}
-          <a href="tel:18005551234" class="font-semibold text-blue-700">
+          <a href="tel:18005551234" class="font-semibold text-brand-blue">
             (800) 555-1234
           </a>
           <span class="mx-1.5 text-gray-300">|</span>
@@ -299,6 +380,8 @@ function TxnRowForm({
   index,
   isBulk,
   errors,
+  expanded,
+  onToggleExpand,
   onChange,
   onRemove,
 }: {
@@ -306,6 +389,8 @@ function TxnRowForm({
   index: number;
   isBulk: boolean;
   errors: Record<string, string>;
+  expanded: boolean;
+  onToggleExpand: () => void;
   onChange: (patch: Partial<TxnRow>) => void;
   onRemove?: () => void;
 }) {
@@ -369,211 +454,326 @@ function TxnRowForm({
         </div>
       </div>
 
-      <div class="grid grid-cols-2 gap-3 mb-3">
-        {/* Type */}
-        <div>
-          <label class={LABEL}>Transaction Type</label>
-          <select
-            class={INPUT}
-            value={row.type}
-            onChange={(e) => onChange({ type: (e.target as HTMLSelectElement).value })}
-          >
-            {TXN_TYPES.map(({ value, label }) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
-        </div>
-
-        {/* Merchant */}
-        <div>
-          <label class={LABEL}>
-            Merchant / Counterparty <span class="text-red-500 normal-case">*</span>
-          </label>
-          <input
-            type="text"
-            class={`${INPUT} ${errors[`${p}merchant`] ? "border-red-400" : ""}`}
-            placeholder="Name on the transaction"
-            value={row.merchant}
-            onInput={(e) => onChange({ merchant: (e.target as HTMLInputElement).value })}
-          />
-          {errors[`${p}merchant`] && (
-            <p class="mt-1 text-xs text-red-500">{errors[`${p}merchant`]}</p>
-          )}
-        </div>
-      </div>
-
-      {/* Pending checkbox */}
-      <label
-        class={`flex items-start gap-2.5 cursor-pointer select-none p-3 rounded-lg mb-3 transition-colors ${
-          row.isPending ? "bg-amber-50 border border-amber-200" : "bg-gray-50 border border-gray-100"
-        }`}
-      >
+      {/* Merchant */}
+      <div class="mb-3">
+        <label class={LABEL}>
+          Merchant / Counterparty <span class="text-red-500 normal-case">*</span>
+        </label>
         <input
-          type="checkbox"
-          class="w-4 h-4 rounded border-gray-300 text-amber-500 mt-0.5"
-          checked={row.isPending}
-          onChange={(e) => onChange({ isPending: (e.target as HTMLInputElement).checked })}
+          type="text"
+          class={`${INPUT} ${errors[`${p}merchant`] ? "border-red-400" : ""}`}
+          placeholder="Name on the transaction"
+          value={row.merchant}
+          onInput={(e) => onChange({ merchant: (e.target as HTMLInputElement).value })}
         />
-        <div>
-          <span class="text-sm font-medium text-gray-800">
-            This transaction has not yet posted (still pending)
-          </span>
-          {row.isPending && (
-            <p class="text-xs text-amber-700 mt-0.5">
-              This will flag your case as high priority — pending transactions may still be cancellable.
-            </p>
-          )}
-        </div>
-      </label>
-
-      {/* Merchant contact */}
-      <div>
-        <label class={LABEL}>Have you contacted the merchant about this transaction?</label>
-        <div class="flex gap-4 mb-2">
-          {(["yes", "no", "na"] as MerchantContact[]).map((v) => (
-            <label key={v} class="flex items-center gap-1.5 cursor-pointer text-sm text-gray-700">
-              <input
-                type="radio"
-                class="text-blue-600"
-                name={`merchant_contact_${row.id}`}
-                value={v}
-                checked={row.merchantContacted === v}
-                onChange={() => onChange({ merchantContacted: v, merchantContactOutcome: "" })}
-              />
-              {v === "yes" ? "Yes" : v === "no" ? "No" : "Not applicable"}
-            </label>
-          ))}
-        </div>
-        {row.merchantContacted === "yes" && (
-          <div class="pl-1">
-            <label class={LABEL}>What was the outcome of that communication?</label>
-            <input
-              type="text"
-              class={INPUT}
-              placeholder="e.g. Merchant refused to refund, said the transaction was valid"
-              value={row.merchantContactOutcome}
-              onInput={(e) =>
-                onChange({ merchantContactOutcome: (e.target as HTMLInputElement).value })
-              }
-            />
-          </div>
+        {errors[`${p}merchant`] && (
+          <p class="mt-1 text-xs text-red-500">{errors[`${p}merchant`]}</p>
         )}
       </div>
+
+      <button
+        type="button"
+        class="text-xs text-gray-500 hover:text-gray-700 font-medium flex items-center gap-1 transition-colors"
+        onClick={onToggleExpand}
+        aria-expanded={expanded}
+      >
+        <svg
+          class={`w-3.5 h-3.5 transition-transform ${expanded ? "rotate-180" : ""}`}
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+        {expanded ? "Hide details" : "More details (type, pending, merchant contact)"}
+      </button>
+
+      {expanded && (
+        <div class="mt-3 pt-3 border-t border-gray-100 space-y-3">
+          {/* Type */}
+          <div>
+            <label class={LABEL}>Transaction Type</label>
+            <select
+              class={INPUT}
+              value={row.type}
+              onChange={(e) => onChange({ type: (e.target as HTMLSelectElement).value })}
+            >
+              {TXN_TYPES.map(({ value, label }) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Pending checkbox */}
+          <label
+            class={`flex items-start gap-2.5 cursor-pointer select-none p-3 rounded-lg transition-colors ${
+              row.isPending ? "bg-amber-50 border border-amber-200" : "bg-gray-50 border border-gray-100"
+            }`}
+          >
+            <input
+              type="checkbox"
+              class="w-4 h-4 rounded border-gray-300 text-amber-500 mt-0.5"
+              checked={row.isPending}
+              onChange={(e) => onChange({ isPending: (e.target as HTMLInputElement).checked })}
+            />
+            <div>
+              <span class="text-sm font-medium text-gray-800">
+                This transaction has not yet posted (still pending)
+              </span>
+              {row.isPending && (
+                <p class="text-xs text-amber-700 mt-0.5">
+                  This will flag your case as high priority — pending transactions may still be cancellable.
+                </p>
+              )}
+            </div>
+          </label>
+
+          {/* Merchant contact */}
+          <div>
+            <label class={LABEL}>Have you contacted the merchant about this transaction?</label>
+            <div class="flex gap-4 mb-2">
+              {(["yes", "no", "na"] as MerchantContact[]).map((v) => (
+                <label key={v} class="flex items-center gap-1.5 cursor-pointer text-sm text-gray-700">
+                  <input
+                    type="radio"
+                    class="accent-brand-blue"
+                    name={`merchant_contact_${row.id}`}
+                    value={v}
+                    checked={row.merchantContacted === v}
+                    onChange={() => onChange({ merchantContacted: v, merchantContactOutcome: "" })}
+                  />
+                  {v === "yes" ? "Yes" : v === "no" ? "No" : "Not applicable"}
+                </label>
+              ))}
+            </div>
+            {row.merchantContacted === "yes" && (
+              <div class="pl-1">
+                <label class={LABEL}>What was the outcome of that communication?</label>
+                <input
+                  type="text"
+                  class={INPUT}
+                  placeholder="e.g. Merchant refused to refund, said the transaction was valid"
+                  value={row.merchantContactOutcome}
+                  onInput={(e) =>
+                    onChange({ merchantContactOutcome: (e.target as HTMLInputElement).value })
+                  }
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+type PermissionDecision = "pending" | "granted" | "denied";
 
 function Confirmation({
   isBulk,
   rows,
   totalAmount,
   hasAnyPending,
+  manyOthers,
 }: {
   isBulk: boolean;
   rows: TxnRow[];
   totalAmount: number;
   hasAnyPending: boolean;
+  manyOthers: boolean;
 }) {
+  const [decisions, setDecisions] = useState<Record<string, PermissionDecision>>(
+    () => {
+      const initial: Record<string, PermissionDecision> = Object.fromEntries(
+        INITIAL_PERMISSIONS.map((p) => [p.id, "pending"]),
+      );
+      const existing = loadPermissionDecisions();
+      if (existing) {
+        for (const r of existing) initial[r.id] = r.status;
+      }
+      return initial;
+    },
+  );
+
+  const persist = (next: Record<string, PermissionDecision>) => {
+    setDecisions(next);
+    const prev = loadPermissionDecisions() ?? [];
+    const prevMap = Object.fromEntries(prev.map((r) => [r.id, r]));
+    const nowStamp = formatDecidedAt();
+    const records = INITIAL_PERMISSIONS
+      .filter((p) => next[p.id] !== "pending")
+      .map((p) => {
+        const status = next[p.id] as "granted" | "denied";
+        const earlier = prevMap[p.id];
+        return {
+          id: p.id,
+          status,
+          decidedAt: earlier && earlier.status === status ? earlier.decidedAt : nowStamp,
+        };
+      });
+    savePermissionDecisions(records);
+  };
+
+  const decide = (id: string, choice: PermissionDecision) =>
+    persist({ ...decisions, [id]: choice });
+
+  const grantAll = () =>
+    persist(Object.fromEntries(INITIAL_PERMISSIONS.map((p) => [p.id, "granted"])));
+
+  const totalDecided = Object.values(decisions).filter((d) => d !== "pending").length;
+  const allDecided = totalDecided === INITIAL_PERMISSIONS.length;
+  const grantedCount = Object.values(decisions).filter((d) => d === "granted").length;
   return (
-    <div class="min-h-screen bg-slate-50 pb-24">
-      <header class="bg-blue-900 text-white px-4 py-4">
+    <div class="min-h-screen bg-brand-slate pb-24">
+      <header class="bg-brand-navy text-white px-4 py-4 border-b-2 border-brand-blue/40">
         <div class="max-w-2xl mx-auto flex items-center justify-between">
-          <div>
-            <div class="font-bold text-base">First Community Bank</div>
-            <div class="text-blue-200 text-xs">Fraud Claim Portal</div>
+          <div class="flex items-center gap-3">
+            <div class="bg-white rounded-lg p-1.5">
+              <img src="/firstcall-logo.png" alt="FirstCall" class="h-6 w-auto" />
+            </div>
+            <div>
+              <div class="font-semibold text-sm leading-tight">First Community Bank</div>
+              <div class="text-slate-300 text-[11px]">Fraud Claim Portal · ClearPath</div>
+            </div>
           </div>
           <div class="text-right text-sm">
             <div class="font-medium">{DEMO_CASE.consumer.name}</div>
-            <div class="text-blue-200 text-xs">Account ••••{DEMO_CASE.consumer.accountEnding}</div>
+            <div class="text-slate-400 text-xs">Account ••••{DEMO_CASE.consumer.accountEnding}</div>
           </div>
         </div>
       </header>
 
-      <div class="max-w-2xl mx-auto px-4 py-10 text-center">
-        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
-          <svg class="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-          </svg>
+      <div class="max-w-md mx-auto px-4 py-4">
+        {/* Compact success banner */}
+        <div class="bg-white border border-gray-200 rounded-xl px-4 py-3 mb-3 flex items-center gap-3 brand-card-shadow">
+          <div class="w-9 h-9 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg class="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="font-semibold text-gray-900 text-sm">
+              Claim Submitted · #{DEMO_CASE.id}
+            </div>
+            <div class="text-xs text-gray-500 truncate">
+              ${totalAmount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {isBulk ? ` · ${rows.length} transactions` : ` · ${TXN_TYPES.find((t) => t.value === rows[0].type)?.label ?? rows[0].type}`}
+              {" · "}Reg E by {DEMO_CASE.regEDeadline}
+            </div>
+          </div>
         </div>
 
-        <h1 class="text-2xl font-bold text-gray-900 mb-2">Claim Submitted</h1>
-        <p class="text-gray-500 text-sm mb-6 max-w-sm mx-auto leading-relaxed">
-          Your fraud claim has been received. A confirmation has been sent to{" "}
-          <strong>{DEMO_CASE.consumer.email}</strong> and{" "}
-          <strong>{DEMO_CASE.consumer.phone}</strong>.
-        </p>
+        {(hasAnyPending || manyOthers) && (
+          <div class="mb-3 space-y-1.5">
+            {hasAnyPending && (
+              <div class="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs text-amber-800">
+                <strong>High Priority</strong> — pending transaction escalates this case.
+              </div>
+            )}
+            {manyOthers && (
+              <div class="bg-brand-blue-soft border border-brand-blue/30 rounded-lg px-3 py-2 text-xs text-brand-navy">
+                <strong>More transactions noted</strong> — your investigator will follow up.
+              </div>
+            )}
+          </div>
+        )}
 
-        {/* Case summary card */}
-        <div class="bg-white rounded-2xl border border-gray-200 p-6 text-left mb-6 max-w-sm mx-auto">
-          <div class="text-xs text-gray-400 uppercase tracking-wide mb-1">Your Case Number</div>
-          <div class="text-2xl font-bold text-blue-700 mb-4">#{DEMO_CASE.id}</div>
+        {/* Permissions grant */}
+        <div class="bg-white border border-gray-200 rounded-xl p-4 mb-3 brand-card-shadow">
+          <div class="flex items-center justify-between gap-3 mb-2">
+            <div class="min-w-0">
+              <h3 class="font-semibold text-brand-navy text-sm leading-tight">
+                Grant Information Access
+              </h3>
+              <p class="text-xs text-gray-500 leading-tight mt-0.5">
+                Allow the bank to investigate your claim
+              </p>
+            </div>
+            <button
+              type="button"
+              class="flex-shrink-0 text-xs text-brand-blue hover:text-brand-blue-hover font-semibold whitespace-nowrap"
+              onClick={grantAll}
+            >
+              Grant all
+            </button>
+          </div>
 
-          <dl class="space-y-2 text-sm">
-            <div class="flex justify-between">
-              <dt class="text-gray-500">
-                {isBulk ? `Transactions` : "Transaction"}
-              </dt>
-              <dd class="font-medium">
-                {isBulk
-                  ? `${rows.length} transactions`
-                  : `${TXN_TYPES.find((t) => t.value === rows[0].type)?.label ?? rows[0].type}`}
-              </dd>
-            </div>
-            <div class="flex justify-between">
-              <dt class="text-gray-500">Amount{isBulk ? " (total)" : ""}</dt>
-              <dd class="font-semibold text-red-600">
-                $
-                {totalAmount.toLocaleString("en-US", {
-                  minimumFractionDigits: 2,
-                  maximumFractionDigits: 2,
-                })}
-              </dd>
-            </div>
-            <div class="flex justify-between">
-              <dt class="text-gray-500">Filed</dt>
-              <dd class="font-medium">{DEMO_CASE.filed}</dd>
-            </div>
-            <div class="flex justify-between">
-              <dt class="text-gray-500">Reg E Deadline</dt>
-              <dd class="font-medium text-amber-700">{DEMO_CASE.regEDeadline}</dd>
-            </div>
-          </dl>
+          <div class="space-y-1.5">
+            {INITIAL_PERMISSIONS.map((perm) => {
+              const decision = decisions[perm.id];
+              return (
+                <div
+                  key={perm.id}
+                  class={`flex items-center gap-3 px-3 py-2 rounded-lg border transition-colors ${
+                    decision === "granted"
+                      ? "bg-green-50 border-green-200"
+                      : decision === "denied"
+                      ? "bg-gray-100 border-gray-200"
+                      : "bg-gray-50 border-gray-100"
+                  }`}
+                >
+                  <div class="flex-1 min-w-0">
+                    <div class="text-sm font-medium text-gray-900 truncate">{perm.label}</div>
+                    <div class="text-xs text-gray-500 truncate">{perm.description}</div>
+                  </div>
+                  <div class="flex items-center gap-1 flex-shrink-0">
+                    <button
+                      type="button"
+                      title="Grant"
+                      aria-label={`Grant ${perm.label}`}
+                      aria-pressed={decision === "granted"}
+                      class={`w-7 h-7 rounded-md flex items-center justify-center transition-colors ${
+                        decision === "granted"
+                          ? "bg-green-600 text-white"
+                          : "bg-white text-gray-400 border border-gray-300 hover:text-green-600 hover:border-green-400"
+                      }`}
+                      onClick={() => decide(perm.id, decision === "granted" ? "pending" : "granted")}
+                    >
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      title="Decline"
+                      aria-label={`Decline ${perm.label}`}
+                      aria-pressed={decision === "denied"}
+                      class={`w-7 h-7 rounded-md flex items-center justify-center transition-colors ${
+                        decision === "denied"
+                          ? "bg-gray-500 text-white"
+                          : "bg-white text-gray-400 border border-gray-300 hover:text-gray-700 hover:border-gray-400"
+                      }`}
+                      onClick={() => decide(perm.id, decision === "denied" ? "pending" : "denied")}
+                    >
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
 
-          {hasAnyPending && (
-            <div class="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs text-amber-800">
-              <strong>High Priority</strong> — Your case has been escalated due to a pending transaction.
-            </div>
-          )}
-        </div>
-
-        {/* Next steps */}
-        <div class="bg-blue-50 border border-blue-100 rounded-xl p-5 text-left mb-6 max-w-sm mx-auto">
-          <h3 class="text-sm font-semibold text-blue-900 mb-3">What happens next</h3>
-          <ol class="space-y-2 text-xs text-blue-800 leading-relaxed list-none">
-            {[
-              "A fraud specialist will review your claim within 1–2 business days.",
-              "You may be asked to verify your identity and grant access to account records.",
-              "We'll notify you at each stage of the investigation.",
-              "Under Regulation E, we are required to resolve your case within 45 business days.",
-            ].map((step, i) => (
-              <li key={i} class="flex gap-2">
-                <span class="w-5 h-5 rounded-full bg-blue-200 text-blue-800 flex items-center justify-center flex-shrink-0 font-semibold text-xs">
-                  {i + 1}
-                </span>
-                {step}
-              </li>
-            ))}
-          </ol>
+          <p class="mt-2 text-xs text-gray-400 text-right">
+            {allDecided
+              ? `${grantedCount} of ${INITIAL_PERMISSIONS.length} granted`
+              : `${totalDecided} of ${INITIAL_PERMISSIONS.length} decided`}
+          </p>
         </div>
 
         <a
           href="/consumer"
-          class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-xl transition-colors text-sm"
+          class={`block w-full text-center font-semibold py-3 px-6 rounded-xl transition-all text-sm ${
+            allDecided
+              ? "bg-brand-blue hover:bg-brand-blue-hover text-white shadow-lg shadow-brand-blue/25 hover:-translate-y-0.5"
+              : "bg-white border border-gray-300 text-gray-700 hover:bg-gray-50"
+          }`}
         >
-          View Case Status →
+          {allDecided ? "View Case Status →" : "Skip — view case status"}
         </a>
 
-        <div class="mt-4">
+        <div class="mt-2 text-center">
           <a href="/consumer/intake" class="text-xs text-gray-400 hover:text-gray-600 transition-colors">
             Report another claim
           </a>

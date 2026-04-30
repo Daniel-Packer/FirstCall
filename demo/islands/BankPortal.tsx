@@ -81,32 +81,40 @@ export default function BankPortal() {
   };
 
   return (
-    <div class="min-h-screen bg-gray-100 pb-20">
+    <div class="min-h-screen bg-brand-slate pb-20">
       {/* Header */}
-      <header class="bg-blue-900 text-white px-4 py-4">
+      <header class="bg-brand-navy text-white px-4 py-4 border-b-2 border-brand-blue/40">
         <div class="max-w-5xl mx-auto flex items-center gap-4">
           {view === "case" && (
             <button
-              class="text-blue-300 hover:text-white text-sm transition-colors flex-shrink-0"
+              class="text-slate-300 hover:text-white text-sm transition-colors flex-shrink-0"
               onClick={() => { setView("dashboard"); setSelectedNode(null); }}
             >
               ← Cases
             </button>
           )}
-          <div>
-            <div class="font-bold text-base">First Community Bank</div>
-            <div class="text-blue-200 text-xs">
-              {view === "dashboard" ? "Fraud Investigation Portal" : `Case #${DEMO_CASE.id}`}
+          <div class="flex items-center gap-3">
+            <div class="bg-white rounded-lg p-1.5">
+              <img src="/firstcall-logo.png" alt="FirstCall" class="h-6 w-auto" />
+            </div>
+            <div>
+              <div class="font-semibold text-sm leading-tight">First Community Bank</div>
+              <div class="text-slate-300 text-[11px]">
+                {view === "dashboard" ? "Fraud Investigation Portal · ClearPath" : `Case #${DEMO_CASE.id}`}
+              </div>
             </div>
           </div>
           {view === "case" && (
             <div class="ml-auto text-right text-sm flex-shrink-0">
-              <div class="text-blue-200 text-xs">Reg E Deadline</div>
+              <div class="text-slate-400 text-xs">Reg E Deadline</div>
               <div class="font-semibold">{DEMO_CASE.regEDeadline}</div>
             </div>
           )}
           {view === "dashboard" && (
-            <div class="ml-auto text-xs text-blue-300">M. Rodriguez · Fraud Analyst</div>
+            <div class="ml-auto flex items-center gap-2 text-xs">
+              <div class="w-7 h-7 rounded-full bg-brand-blue text-white flex items-center justify-center text-[11px] font-bold">MR</div>
+              <div class="text-slate-300">M. Rodriguez · Fraud Analyst</div>
+            </div>
           )}
         </div>
       </header>
@@ -140,29 +148,29 @@ function Dashboard({ onOpenCase }: { onOpenCase: () => void }) {
       {/* Stats */}
       <div class="grid grid-cols-3 gap-4 mb-6">
         {[
-          { value: "3", label: "Open Cases", color: "text-gray-900" },
+          { value: "3", label: "Open Cases", color: "text-brand-navy" },
           { value: "1", label: "High Priority", color: "text-red-600" },
           { value: "1", label: "Resolved This Week", color: "text-green-600" },
         ].map(({ value, label, color }) => (
           <div
             key={label}
-            class="bg-white rounded-xl border border-gray-200 px-4 py-4 text-center"
+            class="bg-white rounded-xl border border-gray-200 px-4 py-4 text-center brand-card-shadow"
           >
-            <div class={`text-2xl font-bold ${color}`}>{value}</div>
-            <div class="text-xs text-gray-500 mt-0.5">{label}</div>
+            <div class={`text-3xl font-bold tracking-tight ${color}`}>{value}</div>
+            <div class="text-xs text-gray-500 mt-1 uppercase tracking-wide font-medium">{label}</div>
           </div>
         ))}
       </div>
 
       {/* Cases table */}
       <div class="flex items-center justify-between mb-3">
-        <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Active Cases</h2>
-        <button class="bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors">
+        <h2 class="text-sm font-bold text-brand-navy uppercase tracking-wider">Active Cases</h2>
+        <button class="bg-brand-blue hover:bg-brand-blue-hover text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors shadow-md shadow-brand-blue/20">
           + New Case
         </button>
       </div>
 
-      <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      <div class="bg-white rounded-xl brand-card-shadow border border-gray-200 overflow-hidden">
         <table class="w-full text-sm">
           <thead class="bg-gray-50 border-b border-gray-100">
             <tr>
@@ -181,17 +189,17 @@ function Dashboard({ onOpenCase }: { onOpenCase: () => void }) {
           <tbody class="divide-y divide-gray-50">
             {/* Live demo case */}
             <tr
-              class="hover:bg-blue-50 cursor-pointer transition-colors"
+              class="hover:bg-brand-blue-soft cursor-pointer transition-colors"
               onClick={onOpenCase}
             >
-              <td class="px-4 py-3 font-mono text-blue-600 font-semibold text-xs">
+              <td class="px-4 py-3 font-mono text-brand-blue font-semibold text-xs">
                 {DEMO_CASE.id}
               </td>
               <td class="px-4 py-3 font-medium">{DEMO_CASE.consumer.name}</td>
               <td class="px-4 py-3 font-medium text-red-600">{DEMO_CASE.amount}</td>
               <td class="px-4 py-3">
                 <span class="inline-flex items-center gap-1.5 text-xs">
-                  <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                  <span class="w-2 h-2 rounded-full bg-brand-blue animate-pulse" />
                   In Progress
                 </span>
               </td>
@@ -201,7 +209,7 @@ function Dashboard({ onOpenCase }: { onOpenCase: () => void }) {
                   NORMAL
                 </span>
               </td>
-              <td class="px-4 py-3 text-blue-500 text-xs font-medium">Open →</td>
+              <td class="px-4 py-3 text-brand-blue text-xs font-semibold">Open →</td>
             </tr>
 
             {OTHER_CASES.map((c) => (
@@ -272,9 +280,9 @@ function CaseDetail({
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
         {/* Process map */}
-        <div class="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+        <div class="lg:col-span-2 bg-white rounded-xl brand-card-shadow border border-gray-200 p-5">
           <div class="flex items-center justify-between mb-4">
-            <h2 class="font-semibold text-gray-900 text-sm">Investigation Stages</h2>
+            <h2 class="font-bold text-brand-navy text-sm uppercase tracking-wider">Investigation Stages</h2>
             {saveSuccess && (
               <span class="text-xs text-green-600 font-semibold flex items-center gap-1">
                 <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20">
@@ -302,9 +310,9 @@ function CaseDetail({
                   key={node.id}
                   class={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
                     isClickable
-                      ? "cursor-pointer hover:bg-gray-50"
+                      ? "cursor-pointer hover:bg-brand-blue-soft/50"
                       : "opacity-35 cursor-default"
-                  } ${isSelected ? "bg-blue-50 ring-1 ring-blue-200" : ""}`}
+                  } ${isSelected ? "bg-brand-blue-soft ring-1 ring-brand-blue/30" : ""}`}
                   onClick={() => isClickable && onNodeClick(i)}
                 >
                   <div
@@ -312,7 +320,7 @@ function CaseDetail({
                       isComplete
                         ? "bg-green-100 text-green-700"
                         : isActive
-                        ? "bg-blue-100 text-blue-700"
+                        ? "bg-brand-blue text-white ring-4 ring-brand-blue/20"
                         : "bg-gray-100 text-gray-400"
                     }`}
                   >
@@ -320,7 +328,7 @@ function CaseDetail({
                   </div>
 
                   <div class="flex-1 min-w-0">
-                    <div class="text-sm font-medium text-gray-800 leading-tight">
+                    <div class="text-sm font-semibold text-brand-navy leading-tight">
                       {node.label}
                       {node.optional && (
                         <span class="ml-1 text-xs text-gray-400 font-normal">(optional)</span>
@@ -330,13 +338,13 @@ function CaseDetail({
                       <div class="text-xs text-gray-400">{state.completedAt}</div>
                     )}
                     {isActive && (
-                      <div class="text-xs text-blue-500">In progress — click to update</div>
+                      <div class="text-xs text-brand-blue font-medium">In progress — click to update</div>
                     )}
                   </div>
 
                   {isActive && (
-                    <span class="inline-flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full flex-shrink-0">
-                      <span class="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
+                    <span class="inline-flex items-center gap-1 text-xs bg-brand-blue text-white px-2 py-0.5 rounded-full flex-shrink-0">
+                      <span class="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
                       Active
                     </span>
                   )}
@@ -352,13 +360,13 @@ function CaseDetail({
         {/* Side column */}
         <div class="space-y-4">
           {selectedNode !== null ? (
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+            <div class="bg-white rounded-xl brand-card-shadow border border-gray-200 p-5">
               <div class="flex items-start justify-between mb-3">
                 <div>
-                  <h3 class="font-semibold text-gray-900 text-sm">
+                  <h3 class="font-semibold text-brand-navy text-sm">
                     {PROCESS_NODES[selectedNode].label}
                   </h3>
-                  <p class="text-xs text-gray-400">{PROCESS_NODES[selectedNode].id}</p>
+                  <p class="text-xs text-gray-400 font-mono">{PROCESS_NODES[selectedNode].id}</p>
                 </div>
                 <button
                   class="text-gray-300 hover:text-gray-500 text-lg leading-none transition-colors"
@@ -418,7 +426,7 @@ function CaseDetail({
                 </div>
 
                 <button
-                  class="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2.5 px-4 rounded-lg transition-colors"
+                  class="w-full bg-brand-blue hover:bg-brand-blue-hover text-white text-sm font-semibold py-3 px-4 rounded-lg transition-all shadow-md shadow-brand-blue/25 hover:-translate-y-0.5"
                   onClick={onSave}
                 >
                   Save &amp; Notify Consumer
@@ -426,16 +434,16 @@ function CaseDetail({
               </div>
             </div>
           ) : (
-            <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 text-xs text-blue-700 leading-relaxed">
-              Click an <strong>active</strong> or <strong>completed</strong> stage to view
+            <div class="bg-brand-blue-soft border border-brand-blue/20 rounded-xl p-4 text-xs text-brand-navy leading-relaxed">
+              Click an <strong class="text-brand-blue">active</strong> or <strong class="text-brand-blue">completed</strong> stage to view
               details and update its status. Changes will be reflected in the consumer portal
               immediately.
             </div>
           )}
 
           {/* Case summary */}
-          <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
-            <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
+          <div class="bg-white rounded-xl brand-card-shadow border border-gray-200 p-5">
+            <h3 class="text-xs font-bold text-brand-navy uppercase tracking-wider mb-3">
               Case Summary
             </h3>
             <dl class="space-y-2 text-sm">

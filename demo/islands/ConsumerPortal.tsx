@@ -2,10 +2,14 @@ import { useEffect, useState } from "preact/hooks";
 import {
   DEMO_CASE,
   DEMO_STAGE_DEFAULT,
+  formatDecidedAt,
   INITIAL_PERMISSIONS,
+  loadPermissionDecisions,
   LOCALSTORAGE_KEY,
   NODE_STATES_BY_STAGE,
+  PERMISSIONS_CHANGE_EVENT,
   PROCESS_NODES,
+  savePermissionDecisions,
   STAGE_CHANGE_EVENT,
   type NodeState,
   type Permission,
@@ -54,17 +58,22 @@ export default function ConsumerPortal() {
   ];
 
   return (
-    <div class="min-h-screen bg-slate-50 pb-20">
+    <div class="min-h-screen bg-brand-slate pb-20">
       {/* Bank header */}
-      <header class="bg-blue-900 text-white px-4 py-4">
+      <header class="bg-brand-navy text-white px-4 py-4 border-b-2 border-brand-blue/40">
         <div class="max-w-2xl mx-auto flex items-center justify-between">
-          <div>
-            <div class="font-bold text-base">First Community Bank</div>
-            <div class="text-blue-200 text-xs">Fraud Claim Portal</div>
+          <div class="flex items-center gap-3">
+            <div class="bg-white rounded-lg p-1.5">
+              <img src="/firstcall-logo.png" alt="FirstCall" class="h-6 w-auto" />
+            </div>
+            <div>
+              <div class="font-semibold text-sm leading-tight">First Community Bank</div>
+              <div class="text-slate-300 text-[11px]">Fraud Claim Portal · ClearPath</div>
+            </div>
           </div>
           <div class="text-right text-sm">
             <div class="font-medium">{DEMO_CASE.consumer.name}</div>
-            <div class="text-blue-200 text-xs">Account ••••{DEMO_CASE.consumer.accountEnding}</div>
+            <div class="text-slate-400 text-xs">Account ••••{DEMO_CASE.consumer.accountEnding}</div>
           </div>
         </div>
       </header>
@@ -73,8 +82,8 @@ export default function ConsumerPortal() {
       <div class="bg-white border-b border-gray-200">
         <div class="max-w-2xl mx-auto px-4 py-4 flex justify-between items-start gap-4">
           <div>
-            <div class="text-xs text-gray-400 uppercase tracking-wide">Case Number</div>
-            <div class="text-xl font-bold text-gray-900">#{DEMO_CASE.id}</div>
+            <div class="text-xs text-gray-400 uppercase tracking-wide font-semibold">Case Number</div>
+            <div class="text-2xl font-bold text-brand-navy tracking-tight">#{DEMO_CASE.id}</div>
             <div class="text-xs text-gray-500 mt-1">
               Filed {DEMO_CASE.filed} · {DEMO_CASE.transactionType} · {DEMO_CASE.amount}
             </div>
@@ -107,16 +116,16 @@ export default function ConsumerPortal() {
             {tabs.map(({ id, label, badge }) => (
               <button
                 key={id}
-                class={`py-3 px-1 mr-6 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+                class={`py-3 px-1 mr-6 text-sm font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${
                   activeTab === id
-                    ? "border-blue-600 text-blue-600"
+                    ? "border-brand-blue text-brand-blue"
                     : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
                 onClick={() => setActiveTab(id)}
               >
                 {label}
                 {badge && (
-                  <span class="bg-blue-600 text-white text-xs leading-none rounded-full px-1.5 py-0.5">
+                  <span class="bg-brand-blue text-white text-xs leading-none rounded-full px-1.5 py-0.5">
                     !
                   </span>
                 )}
@@ -145,9 +154,9 @@ export default function ConsumerPortal() {
 
       {/* Support footer */}
       <div class="max-w-2xl mx-auto px-4 pb-4">
-        <div class="bg-gray-50 border border-gray-200 rounded-lg p-3 text-center text-xs text-gray-500">
+        <div class="bg-white border border-gray-200 rounded-lg p-3 text-center text-xs text-gray-500">
           Questions about your case?{" "}
-          <a href="tel:18005551234" class="font-semibold text-blue-700">
+          <a href="tel:18005551234" class="font-semibold text-brand-blue">
             (800) 555-1234
           </a>
           <span class="mx-1.5 text-gray-300">|</span>
@@ -161,7 +170,7 @@ export default function ConsumerPortal() {
 function StatusTab({ nodeStates, stage }: { nodeStates: NodeState[]; stage: number }) {
   return (
     <div>
-      <h2 class="text-base font-semibold text-gray-900 mb-4">Investigation Progress</h2>
+      <h2 class="text-base font-semibold text-brand-navy mb-4">Investigation Progress</h2>
 
       {stage < 8 && (
         <div class="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-lg p-3 mb-5">
@@ -201,7 +210,7 @@ function StatusTab({ nodeStates, stage }: { nodeStates: NodeState[]; stage: numb
                     isComplete
                       ? "bg-green-500"
                       : isActive
-                      ? "bg-blue-500"
+                      ? "bg-brand-blue ring-4 ring-brand-blue/20"
                       : "bg-gray-200"
                   }`}
                 >
@@ -241,9 +250,9 @@ function StatusTab({ nodeStates, stage }: { nodeStates: NodeState[]; stage: numb
                   <span
                     class={`text-sm font-semibold leading-none ${
                       isComplete
-                        ? "text-gray-900"
+                        ? "text-brand-navy"
                         : isActive
-                        ? "text-blue-700"
+                        ? "text-brand-blue"
                         : "text-gray-400"
                     }`}
                   >
@@ -256,13 +265,13 @@ function StatusTab({ nodeStates, stage }: { nodeStates: NodeState[]; stage: numb
                     <span class="text-xs text-gray-400 flex-shrink-0">{state.completedAt}</span>
                   )}
                   {isActive && (
-                    <span class="text-xs text-blue-500 font-medium flex-shrink-0">
+                    <span class="text-xs text-brand-blue font-semibold flex-shrink-0">
                       In Progress
                     </span>
                   )}
                 </div>
                 {(isComplete || isActive) && state.consumerMessage && (
-                  <p class={`mt-1.5 text-xs leading-relaxed ${isActive ? "text-blue-600" : "text-gray-500"}`}>
+                  <p class={`mt-1.5 text-xs leading-relaxed ${isActive ? "text-brand-blue" : "text-gray-500"}`}>
                     {state.consumerMessage}
                   </p>
                 )}
@@ -276,69 +285,123 @@ function StatusTab({ nodeStates, stage }: { nodeStates: NodeState[]; stage: numb
 }
 
 function PermissionsTab() {
+  const [permissions, setPermissions] = useState<Permission[]>(INITIAL_PERMISSIONS);
+
+  useEffect(() => {
+    const apply = () => {
+      const records = loadPermissionDecisions();
+      if (!records || records.length === 0) {
+        setPermissions(INITIAL_PERMISSIONS);
+        return;
+      }
+      const recordMap = Object.fromEntries(records.map((r) => [r.id, r]));
+      setPermissions(
+        INITIAL_PERMISSIONS.map((p): Permission => {
+          const r = recordMap[p.id];
+          if (!r) {
+            return { ...p, status: "pending", grantedAt: undefined };
+          }
+          return {
+            ...p,
+            status: r.status,
+            grantedAt: r.status === "granted" ? r.decidedAt : undefined,
+          };
+        }),
+      );
+    };
+    apply();
+    globalThis.addEventListener(PERMISSIONS_CHANGE_EVENT, apply);
+    return () => globalThis.removeEventListener(PERMISSIONS_CHANGE_EVENT, apply);
+  }, []);
+
+  const decide = (id: string, status: "granted" | "denied") => {
+    const existing = loadPermissionDecisions() ?? [];
+    const others = existing.filter((r) => r.id !== id);
+    const next = [
+      ...others,
+      { id, status, decidedAt: formatDecidedAt() },
+    ];
+    savePermissionDecisions(next);
+  };
+
   return (
     <div>
-      <h2 class="text-base font-semibold text-gray-900 mb-1">Information Access Permissions</h2>
+      <h2 class="text-base font-semibold text-brand-navy mb-1">Information Access Permissions</h2>
       <p class="text-xs text-gray-500 mb-5 leading-relaxed">
-        Below is a record of each permission your bank requested during the investigation.
-        These consents are timestamped and cannot be altered retroactively.
+        A record of each permission your bank requested. Pending items are awaiting your decision;
+        granted and denied consents are timestamped.
       </p>
 
       <div class="space-y-2.5">
-        {INITIAL_PERMISSIONS.map((perm: Permission) => (
+        {permissions.map((perm) => (
           <div
             key={perm.id}
             class={`rounded-xl border p-4 ${
               perm.status === "granted"
                 ? "bg-green-50 border-green-200"
-                : "bg-gray-50 border-gray-200"
+                : perm.status === "denied"
+                ? "bg-gray-50 border-gray-200"
+                : "bg-brand-blue-soft border-brand-blue/30"
             }`}
           >
             <div class="flex items-start gap-3">
-              {perm.status === "granted" ? (
-                <svg
-                  class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              ) : (
-                <svg
-                  class="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                    clipRule="evenodd"
-                  />
+              {perm.status === "granted" && (
+                <svg class="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
               )}
+              {perm.status === "denied" && (
+                <svg class="w-5 h-5 text-gray-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              )}
+              {perm.status === "pending" && (
+                <svg class="w-5 h-5 text-brand-blue flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
+
               <div class="flex-1 min-w-0">
                 <div class="flex items-center justify-between gap-2">
-                  <span class="text-sm font-semibold text-gray-900">{perm.label}</span>
+                  <span class="text-sm font-semibold text-brand-navy">{perm.label}</span>
                   <span
                     class={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${
                       perm.status === "granted"
                         ? "bg-green-100 text-green-700"
-                        : "bg-gray-200 text-gray-500"
+                        : perm.status === "denied"
+                        ? "bg-gray-200 text-gray-500"
+                        : "bg-white text-brand-blue border border-brand-blue/30"
                     }`}
                   >
-                    {perm.status === "granted" ? "Granted" : "Denied"}
+                    {perm.status === "granted"
+                      ? "Granted"
+                      : perm.status === "denied"
+                      ? "Denied"
+                      : "Awaiting your decision"}
                   </span>
                 </div>
                 <p class="text-xs text-gray-500 mt-1 leading-relaxed">{perm.description}</p>
-                {perm.grantedAt && (
+                {perm.status === "granted" && perm.grantedAt && (
                   <p class="text-xs text-green-600 mt-1">Granted: {perm.grantedAt}</p>
                 )}
                 {perm.status === "denied" && (
                   <p class="text-xs text-gray-400 mt-1">Not granted by you</p>
+                )}
+                {perm.status === "pending" && (
+                  <div class="flex gap-2 mt-2">
+                    <button
+                      class="text-xs font-semibold py-1.5 px-3 rounded-md bg-brand-blue hover:bg-brand-blue-hover text-white transition-colors"
+                      onClick={() => decide(perm.id, "granted")}
+                    >
+                      Grant
+                    </button>
+                    <button
+                      class="text-xs font-semibold py-1.5 px-3 rounded-md bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 transition-colors"
+                      onClick={() => decide(perm.id, "denied")}
+                    >
+                      Decline
+                    </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -348,7 +411,7 @@ function PermissionsTab() {
 
       <p class="mt-4 text-xs text-gray-400 text-center">
         To revoke a permission, call{" "}
-        <a href="tel:18005551234" class="text-blue-600">
+        <a href="tel:18005551234" class="text-brand-blue font-semibold">
           (800) 555-1234
         </a>
       </p>
@@ -391,7 +454,7 @@ function ResolutionTab({
             />
           </svg>
         </div>
-        <h2 class="text-xl font-bold text-gray-900 mb-2">Resolution Accepted</h2>
+        <h2 class="text-xl font-bold text-brand-navy mb-2 tracking-tight">Resolution Accepted</h2>
         <p class="text-sm text-gray-500 max-w-sm mx-auto leading-relaxed">
           Thank you for confirming. Case #{DEMO_CASE.id} is now closed. The credit of{" "}
           {DEMO_CASE.amount} will appear in your account within 1–2 business days.
@@ -418,7 +481,7 @@ function ResolutionTab({
             />
           </svg>
         </div>
-        <h2 class="text-xl font-bold text-gray-900 mb-2">Dispute Submitted</h2>
+        <h2 class="text-xl font-bold text-brand-navy mb-2 tracking-tight">Dispute Submitted</h2>
         <p class="text-sm text-gray-500 max-w-sm mx-auto leading-relaxed mb-5">
           A fraud specialist will review your dispute and respond within 5 business days.
         </p>
@@ -437,7 +500,7 @@ function ResolutionTab({
 
   return (
     <div>
-      <h2 class="text-base font-semibold text-gray-900 mb-1">Your Case Has Been Resolved</h2>
+      <h2 class="text-base font-semibold text-brand-navy mb-1">Your Case Has Been Resolved</h2>
 
       <div class="bg-green-50 border border-green-200 rounded-xl p-5 my-4">
         <div class="flex items-start gap-3">
@@ -482,7 +545,7 @@ function ResolutionTab({
         <span>
           Have questions?{" "}
           <strong>
-            <a href="tel:18005551234" class="text-blue-700">
+            <a href="tel:18005551234" class="text-brand-blue">
               (800) 555-1234
             </a>
           </strong>
@@ -492,7 +555,7 @@ function ResolutionTab({
       {!showDisputeForm ? (
         <div class="flex flex-col sm:flex-row gap-3">
           <button
-            class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-5 rounded-xl transition-colors text-sm"
+            class="flex-1 bg-brand-blue hover:bg-brand-blue-hover text-white font-semibold py-3 px-5 rounded-xl transition-all text-sm shadow-lg shadow-brand-blue/25 hover:-translate-y-0.5"
             onClick={() => setAccepted(true)}
           >
             Accept Resolution
@@ -505,8 +568,8 @@ function ResolutionTab({
           </button>
         </div>
       ) : (
-        <div class="bg-white border border-gray-200 rounded-xl p-5">
-          <h3 class="font-semibold text-gray-900 mb-4 text-sm">Submit a Dispute</h3>
+        <div class="bg-white border border-gray-200 rounded-xl p-5 brand-card-shadow">
+          <h3 class="font-semibold text-brand-navy mb-4 text-sm">Submit a Dispute</h3>
 
           <div class="mb-4">
             <label class="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">

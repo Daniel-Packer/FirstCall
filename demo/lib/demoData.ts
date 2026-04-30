@@ -201,3 +201,44 @@ export const DEMO_STAGE_MAX = 8;
 export const DEMO_STAGE_DEFAULT = 5;
 export const LOCALSTORAGE_KEY = "clearpath_demo_stage";
 export const STAGE_CHANGE_EVENT = "demoStageChange";
+
+export const PERMISSIONS_STORAGE_KEY = "clearpath_demo_permissions";
+export const PERMISSIONS_CHANGE_EVENT = "demoPermissionsChange";
+
+export interface PermissionDecisionRecord {
+  id: string;
+  status: "granted" | "denied";
+  decidedAt: string;
+}
+
+export function formatDecidedAt(d: Date = new Date()): string {
+  const date = d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+  const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  return `${date} at ${time}`;
+}
+
+export function loadPermissionDecisions(): PermissionDecisionRecord[] | null {
+  if (typeof localStorage === "undefined") return null;
+  const raw = localStorage.getItem(PERMISSIONS_STORAGE_KEY);
+  if (!raw) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed as PermissionDecisionRecord[] : null;
+  } catch {
+    return null;
+  }
+}
+
+export function savePermissionDecisions(records: PermissionDecisionRecord[]) {
+  localStorage.setItem(PERMISSIONS_STORAGE_KEY, JSON.stringify(records));
+  globalThis.dispatchEvent(
+    new CustomEvent(PERMISSIONS_CHANGE_EVENT, { detail: records }),
+  );
+}
+
+export function clearPermissionDecisions() {
+  localStorage.removeItem(PERMISSIONS_STORAGE_KEY);
+  globalThis.dispatchEvent(
+    new CustomEvent(PERMISSIONS_CHANGE_EVENT, { detail: null }),
+  );
+}

@@ -359,7 +359,7 @@ export const UI_STRINGS: Record<Language, Record<string, string>> = {
     access_log_title: "Every time we used your data",
     financial_impact_title: "What this case is doing to your money",
     questions_about_case: "Questions about your case?",
-    youre_protected_title: "You won't pay for this fraud.",
+    youre_protected_title: "You won't pay for any fraud we confirm.",
     youre_protected_body: "We've opened an investigation. Federal law gives us up to 45 business days to finish, and you can ask a question on any stage below. Anything we confirm as fraud is reversed at no cost to you.",
     text_size: "Text size",
     text_size_normal: "Normal",

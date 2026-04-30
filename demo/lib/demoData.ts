@@ -205,10 +205,23 @@ export const STAGE_CHANGE_EVENT = "demoStageChange";
 export const PERMISSIONS_STORAGE_KEY = "clearpath_demo_permissions";
 export const PERMISSIONS_CHANGE_EVENT = "demoPermissionsChange";
 
+export const QUESTIONS_STORAGE_KEY = "clearpath_demo_questions";
+export const QUESTIONS_CHANGE_EVENT = "demoQuestionsChange";
+
 export interface PermissionDecisionRecord {
   id: string;
   status: "granted" | "denied";
   decidedAt: string;
+}
+
+export interface NodeQuestion {
+  id: string;
+  nodeIndex: number;
+  question: string;
+  askedAt: string;
+  answer?: string;
+  answeredAt?: string;
+  answeredBy?: string;
 }
 
 export function formatDecidedAt(d: Date = new Date()): string {
@@ -240,5 +253,52 @@ export function clearPermissionDecisions() {
   localStorage.removeItem(PERMISSIONS_STORAGE_KEY);
   globalThis.dispatchEvent(
     new CustomEvent(PERMISSIONS_CHANGE_EVENT, { detail: null }),
+  );
+}
+
+export function loadQuestions(): NodeQuestion[] {
+  if (typeof localStorage === "undefined") return [];
+  const raw = localStorage.getItem(QUESTIONS_STORAGE_KEY);
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed as NodeQuestion[] : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveQuestions(questions: NodeQuestion[]) {
+  localStorage.setItem(QUESTIONS_STORAGE_KEY, JSON.stringify(questions));
+  globalThis.dispatchEvent(
+    new CustomEvent(QUESTIONS_CHANGE_EVENT, { detail: questions }),
+  );
+}
+
+export function addQuestion(nodeIndex: number, question: string): NodeQuestion {
+  const entry: NodeQuestion = {
+    id: `q_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    nodeIndex,
+    question: question.trim(),
+    askedAt: formatDecidedAt(),
+  };
+  const next = [...loadQuestions(), entry];
+  saveQuestions(next);
+  return entry;
+}
+
+export function answerQuestion(id: string, answer: string, agent = DEMO_CASE.assignedAgent) {
+  const next = loadQuestions().map((q) =>
+    q.id === id
+      ? { ...q, answer: answer.trim(), answeredAt: formatDecidedAt(), answeredBy: agent }
+      : q
+  );
+  saveQuestions(next);
+}
+
+export function clearQuestions() {
+  localStorage.removeItem(QUESTIONS_STORAGE_KEY);
+  globalThis.dispatchEvent(
+    new CustomEvent(QUESTIONS_CHANGE_EVENT, { detail: [] }),
   );
 }

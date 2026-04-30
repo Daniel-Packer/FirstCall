@@ -1,6 +1,7 @@
 import { useEffect, useState } from "preact/hooks";
 import {
   clearPermissionDecisions,
+  clearQuestions,
   DEMO_STAGE_DEFAULT,
   DEMO_STAGE_MAX,
   LOCALSTORAGE_KEY,
@@ -73,6 +74,7 @@ export default function DemoBar() {
             onClick={() => {
               dispatch(DEMO_STAGE_DEFAULT);
               clearPermissionDecisions();
+              clearQuestions();
             }}
           >
             Reset

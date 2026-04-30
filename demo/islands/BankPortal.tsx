@@ -1,13 +1,17 @@
 import { useEffect, useState } from "preact/hooks";
 import {
+  answerQuestion,
   DEMO_CASE,
   DEMO_STAGE_DEFAULT,
   DEMO_STAGE_MAX,
+  loadQuestions,
   LOCALSTORAGE_KEY,
   NODE_STATES_BY_STAGE,
-  PROCESS_NODES,
-  STAGE_CHANGE_EVENT,
+  type NodeQuestion,
   type NodeState,
+  PROCESS_NODES,
+  QUESTIONS_CHANGE_EVENT,
+  STAGE_CHANGE_EVENT,
 } from "../lib/demoData.ts";
 
 type View = "dashboard" | "case";
@@ -41,6 +45,7 @@ export default function BankPortal() {
   const [internalNotes, setInternalNotes] = useState("");
   const [consumerMsg, setConsumerMsg] = useState("");
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [questions, setQuestions] = useState<NodeQuestion[]>([]);
 
   const nodeStates: NodeState[] = NODE_STATES_BY_STAGE[stage] ?? NODE_STATES_BY_STAGE[DEMO_STAGE_DEFAULT];
   const activeIdx = nodeStates.findIndex((n) => n.status === "in-progress");
@@ -54,12 +59,21 @@ export default function BankPortal() {
 
     const handler = (e: Event) => setStage((e as CustomEvent<number>).detail);
     globalThis.addEventListener(STAGE_CHANGE_EVENT, handler);
-    return () => globalThis.removeEventListener(STAGE_CHANGE_EVENT, handler);
+
+    setQuestions(loadQuestions());
+    const qHandler = () => setQuestions(loadQuestions());
+    globalThis.addEventListener(QUESTIONS_CHANGE_EVENT, qHandler);
+
+    return () => {
+      globalThis.removeEventListener(STAGE_CHANGE_EVENT, handler);
+      globalThis.removeEventListener(QUESTIONS_CHANGE_EVENT, qHandler);
+    };
   }, []);
 
   const openNode = (i: number) => {
     const state = nodeStates[i];
-    if (state.status === "pending" && i !== activeIdx + 1) return;
+    const hasQuestions = questions.some((q) => q.nodeIndex === i);
+    if (state.status === "pending" && i !== activeIdx + 1 && !hasQuestions) return;
     setSelectedNode(i);
     setEditStatus(state.status === "in-progress" ? "complete" : state.status);
     setConsumerMsg(state.consumerMessage ?? "");
@@ -120,7 +134,10 @@ export default function BankPortal() {
       </header>
 
       {view === "dashboard" ? (
-        <Dashboard onOpenCase={() => setView("case")} />
+        <Dashboard
+          onOpenCase={() => setView("case")}
+          pendingQuestionCount={questions.filter((q) => !q.answer).length}
+        />
       ) : (
         <CaseDetail
           nodeStates={nodeStates}
@@ -133,6 +150,7 @@ export default function BankPortal() {
           consumerMsg={consumerMsg}
           setConsumerMsg={setConsumerMsg}
           saveSuccess={saveSuccess}
+          questions={questions}
           onNodeClick={openNode}
           onSave={saveNode}
           onCancelEdit={() => setSelectedNode(null)}
@@ -142,16 +160,28 @@ export default function BankPortal() {
   );
 }
 
-function Dashboard({ onOpenCase }: { onOpenCase: () => void }) {
+function Dashboard({
+  onOpenCase,
+  pendingQuestionCount,
+}: {
+  onOpenCase: () => void;
+  pendingQuestionCount: number;
+}) {
+  const statCards = [
+    { value: "3", label: "Open Cases", color: "text-brand-navy" },
+    { value: "1", label: "High Priority", color: "text-red-600" },
+    {
+      value: String(pendingQuestionCount),
+      label: "Consumer Questions",
+      color: pendingQuestionCount > 0 ? "text-brand-blue" : "text-brand-navy",
+    },
+  ];
+
   return (
     <div class="max-w-5xl mx-auto px-4 py-6">
       {/* Stats */}
       <div class="grid grid-cols-3 gap-4 mb-6">
-        {[
-          { value: "3", label: "Open Cases", color: "text-brand-navy" },
-          { value: "1", label: "High Priority", color: "text-red-600" },
-          { value: "1", label: "Resolved This Week", color: "text-green-600" },
-        ].map(({ value, label, color }) => (
+        {statCards.map(({ value, label, color }) => (
           <div
             key={label}
             class="bg-white rounded-xl border border-gray-200 px-4 py-4 text-center brand-card-shadow"
@@ -257,6 +287,7 @@ function CaseDetail({
   consumerMsg,
   setConsumerMsg,
   saveSuccess,
+  questions,
   onNodeClick,
   onSave,
   onCancelEdit,
@@ -271,10 +302,14 @@ function CaseDetail({
   consumerMsg: string;
   setConsumerMsg: (v: string) => void;
   saveSuccess: boolean;
+  questions: NodeQuestion[];
   onNodeClick: (i: number) => void;
   onSave: () => void;
   onCancelEdit: () => void;
 }) {
+  const selectedQuestions = selectedNode !== null
+    ? questions.filter((q) => q.nodeIndex === selectedNode)
+    : [];
   return (
     <div class="max-w-5xl mx-auto px-4 py-6">
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -304,16 +339,18 @@ function CaseDetail({
               const isComplete = state.status === "complete";
               const isClickable = isComplete || isActive;
               const isSelected = selectedNode === i;
+              const nodeQuestions = questions.filter((q) => q.nodeIndex === i);
+              const pendingQ = nodeQuestions.filter((q) => !q.answer).length;
 
               return (
                 <div
                   key={node.id}
                   class={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${
-                    isClickable
+                    isClickable || nodeQuestions.length > 0
                       ? "cursor-pointer hover:bg-brand-blue-soft/50"
                       : "opacity-35 cursor-default"
                   } ${isSelected ? "bg-brand-blue-soft ring-1 ring-brand-blue/30" : ""}`}
-                  onClick={() => isClickable && onNodeClick(i)}
+                  onClick={() => (isClickable || nodeQuestions.length > 0) && onNodeClick(i)}
                 >
                   <div
                     class={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold ${
@@ -342,13 +379,24 @@ function CaseDetail({
                     )}
                   </div>
 
+                  {pendingQ > 0 && (
+                    <span
+                      class="inline-flex items-center gap-1 text-[11px] font-semibold bg-amber-100 text-amber-800 border border-amber-300 px-2 py-0.5 rounded-full flex-shrink-0"
+                      title={`${pendingQ} consumer question${pendingQ === 1 ? "" : "s"} awaiting reply`}
+                    >
+                      <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.4}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      </svg>
+                      {pendingQ}
+                    </span>
+                  )}
                   {isActive && (
                     <span class="inline-flex items-center gap-1 text-xs bg-brand-blue text-white px-2 py-0.5 rounded-full flex-shrink-0">
                       <span class="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
                       Active
                     </span>
                   )}
-                  {isComplete && (
+                  {isComplete && pendingQ === 0 && (
                     <span class="text-xs text-gray-300 flex-shrink-0">Edit</span>
                   )}
                 </div>
@@ -431,6 +479,10 @@ function CaseDetail({
                 >
                   Save &amp; Notify Consumer
                 </button>
+
+                {selectedQuestions.length > 0 && (
+                  <ConsumerQuestionsPanel questions={selectedQuestions} />
+                )}
               </div>
             </div>
           ) : (
@@ -465,6 +517,107 @@ function CaseDetail({
               ))}
             </dl>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ConsumerQuestionsPanel({ questions }: { questions: NodeQuestion[] }) {
+  const pending = questions.filter((q) => !q.answer);
+  const answered = questions.filter((q) => q.answer);
+
+  return (
+    <div class="mt-2 pt-4 border-t border-gray-100">
+      <div class="flex items-center justify-between mb-2.5">
+        <h4 class="text-xs font-bold text-brand-navy uppercase tracking-wider flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-brand-blue" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+          Consumer Questions
+        </h4>
+        {pending.length > 0 && (
+          <span class="text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-300 px-2 py-0.5 rounded-full">
+            {pending.length} awaiting reply
+          </span>
+        )}
+      </div>
+
+      <div class="space-y-2">
+        {pending.map((q) => <PendingQuestionCard key={q.id} question={q} />)}
+        {answered.map((q) => <AnsweredQuestionCard key={q.id} question={q} />)}
+      </div>
+    </div>
+  );
+}
+
+function PendingQuestionCard({ question }: { question: NodeQuestion }) {
+  const [draft, setDraft] = useState("");
+
+  const submit = () => {
+    const text = draft.trim();
+    if (!text) return;
+    answerQuestion(question.id, text);
+    setDraft("");
+  };
+
+  return (
+    <div class="rounded-lg border border-amber-200 bg-amber-50/60 p-3">
+      <div class="flex items-start gap-2 mb-2">
+        <span class="mt-0.5 inline-flex w-5 h-5 rounded-full bg-white text-amber-700 border border-amber-300 items-center justify-center text-[10px] font-bold flex-shrink-0">
+          Q
+        </span>
+        <div class="min-w-0 flex-1">
+          <p class="text-xs text-brand-navy leading-relaxed">{question.question}</p>
+          <p class="text-[10px] text-gray-500 mt-0.5">
+            {DEMO_CASE.consumer.name} · {question.askedAt}
+          </p>
+        </div>
+      </div>
+      <textarea
+        class="w-full text-xs bg-white border border-gray-200 rounded-md px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent resize-none"
+        rows={2}
+        placeholder="Reply to the consumer..."
+        value={draft}
+        onInput={(e) => setDraft((e.target as HTMLTextAreaElement).value)}
+      />
+      <div class="flex items-center justify-end mt-1.5">
+        <button
+          type="button"
+          disabled={!draft.trim()}
+          onClick={submit}
+          class="text-[11px] font-semibold bg-brand-blue hover:bg-brand-blue-hover disabled:opacity-40 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-md transition-colors"
+        >
+          Send Reply
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function AnsweredQuestionCard({ question }: { question: NodeQuestion }) {
+  return (
+    <div class="rounded-lg border border-gray-200 bg-white p-3 text-xs">
+      <div class="flex items-start gap-2">
+        <span class="mt-0.5 inline-flex w-5 h-5 rounded-full bg-brand-blue-soft text-brand-blue items-center justify-center text-[10px] font-bold flex-shrink-0">
+          Q
+        </span>
+        <div class="min-w-0 flex-1">
+          <p class="text-brand-navy leading-relaxed">{question.question}</p>
+          <p class="text-[10px] text-gray-400 mt-0.5">
+            {DEMO_CASE.consumer.name} · {question.askedAt}
+          </p>
+        </div>
+      </div>
+      <div class="flex items-start gap-2 mt-2 pt-2 border-t border-gray-100">
+        <span class="mt-0.5 inline-flex w-5 h-5 rounded-full bg-brand-blue text-white items-center justify-center text-[10px] font-bold flex-shrink-0">
+          A
+        </span>
+        <div class="min-w-0 flex-1">
+          <p class="text-gray-700 leading-relaxed">{question.answer}</p>
+          <p class="text-[10px] text-gray-400 mt-0.5">
+            {question.answeredBy} · {question.answeredAt}
+          </p>
         </div>
       </div>
     </div>

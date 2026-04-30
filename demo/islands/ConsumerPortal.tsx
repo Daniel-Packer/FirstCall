@@ -1,18 +1,22 @@
 import { useEffect, useState } from "preact/hooks";
 import {
+  addQuestion,
   DEMO_CASE,
   DEMO_STAGE_DEFAULT,
   formatDecidedAt,
   INITIAL_PERMISSIONS,
   loadPermissionDecisions,
+  loadQuestions,
   LOCALSTORAGE_KEY,
   NODE_STATES_BY_STAGE,
+  type NodeQuestion,
+  type NodeState,
   PERMISSIONS_CHANGE_EVENT,
+  type Permission,
   PROCESS_NODES,
+  QUESTIONS_CHANGE_EVENT,
   savePermissionDecisions,
   STAGE_CHANGE_EVENT,
-  type NodeState,
-  type Permission,
 } from "../lib/demoData.ts";
 
 type Tab = "status" | "permissions" | "resolution";
@@ -168,6 +172,16 @@ export default function ConsumerPortal() {
 }
 
 function StatusTab({ nodeStates, stage }: { nodeStates: NodeState[]; stage: number }) {
+  const [questions, setQuestions] = useState<NodeQuestion[]>([]);
+  const [expandedAsk, setExpandedAsk] = useState<number | null>(null);
+
+  useEffect(() => {
+    setQuestions(loadQuestions());
+    const handler = () => setQuestions(loadQuestions());
+    globalThis.addEventListener(QUESTIONS_CHANGE_EVENT, handler);
+    return () => globalThis.removeEventListener(QUESTIONS_CHANGE_EVENT, handler);
+  }, []);
+
   return (
     <div>
       <h2 class="text-base font-semibold text-brand-navy mb-4">Investigation Progress</h2>
@@ -275,11 +289,135 @@ function StatusTab({ nodeStates, stage }: { nodeStates: NodeState[]; stage: numb
                     {state.consumerMessage}
                   </p>
                 )}
+
+                <NodeQA
+                  nodeIndex={i}
+                  questions={questions.filter((q) => q.nodeIndex === i)}
+                  expanded={expandedAsk === i}
+                  onToggle={() => setExpandedAsk((cur) => (cur === i ? null : i))}
+                />
               </div>
             </div>
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function NodeQA({
+  nodeIndex,
+  questions,
+  expanded,
+  onToggle,
+}: {
+  nodeIndex: number;
+  questions: NodeQuestion[];
+  expanded: boolean;
+  onToggle: () => void;
+}) {
+  const [draft, setDraft] = useState("");
+  const hasQuestions = questions.length > 0;
+  const pendingCount = questions.filter((q) => !q.answer).length;
+
+  const submit = (e: Event) => {
+    e.preventDefault();
+    const text = draft.trim();
+    if (!text) return;
+    addQuestion(nodeIndex, text);
+    setDraft("");
+  };
+
+  return (
+    <div class="mt-2">
+      {hasQuestions && (
+        <ul class="mt-2 space-y-2">
+          {questions.map((q) => (
+            <li
+              key={q.id}
+              class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs leading-relaxed"
+            >
+              <div class="flex items-start gap-2">
+                <span class="mt-0.5 inline-flex w-5 h-5 rounded-full bg-brand-blue-soft text-brand-blue items-center justify-center text-[10px] font-bold flex-shrink-0">
+                  Q
+                </span>
+                <div class="min-w-0">
+                  <p class="text-brand-navy">{q.question}</p>
+                  <p class="text-[10px] text-gray-400 mt-0.5">You · {q.askedAt}</p>
+                </div>
+              </div>
+              {q.answer ? (
+                <div class="flex items-start gap-2 mt-2 pt-2 border-t border-gray-100">
+                  <span class="mt-0.5 inline-flex w-5 h-5 rounded-full bg-brand-blue text-white items-center justify-center text-[10px] font-bold flex-shrink-0">
+                    A
+                  </span>
+                  <div class="min-w-0">
+                    <p class="text-gray-700">{q.answer}</p>
+                    <p class="text-[10px] text-gray-400 mt-0.5">
+                      {q.answeredBy ?? "Investigator"} · {q.answeredAt}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div class="mt-1.5 ml-7 inline-flex items-center gap-1.5 text-[10px] text-amber-700">
+                  <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                  Awaiting investigator response
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <button
+        type="button"
+        class="mt-2 inline-flex items-center gap-1.5 text-[11px] font-semibold text-brand-blue hover:text-brand-blue-hover transition-colors"
+        onClick={onToggle}
+        aria-expanded={expanded}
+      >
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+        </svg>
+        {expanded
+          ? "Cancel"
+          : hasQuestions
+          ? `Ask another question${pendingCount ? ` · ${pendingCount} awaiting reply` : ""}`
+          : "Ask a question about this stage"}
+      </button>
+
+      {expanded && (
+        <form
+          onSubmit={submit}
+          class="mt-2 rounded-lg border border-brand-blue/30 bg-brand-blue-soft/40 p-2.5"
+        >
+          <textarea
+            class="w-full text-xs bg-white border border-gray-200 rounded-md px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-brand-blue focus:border-transparent resize-none"
+            rows={2}
+            placeholder="What would you like to know?"
+            value={draft}
+            onInput={(e) => setDraft((e.target as HTMLTextAreaElement).value)}
+          />
+          <div class="flex items-center justify-end gap-2 mt-2">
+            <button
+              type="button"
+              class="text-[11px] text-gray-500 hover:text-gray-700 px-2 py-1"
+              onClick={() => {
+                setDraft("");
+                onToggle();
+              }}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!draft.trim()}
+              class="text-[11px] font-semibold bg-brand-blue hover:bg-brand-blue-hover disabled:opacity-40 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-md transition-colors"
+            >
+              Send to investigator
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

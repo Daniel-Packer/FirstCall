@@ -62,40 +62,42 @@ export default function ConsumerPortal() {
   ];
 
   return (
-    <div class="min-h-screen bg-brand-slate pb-20">
+    <div class="min-h-screen bg-brand-slate pb-16">
       {/* Bank header */}
-      <header class="bg-brand-navy text-white px-4 py-4 border-b-2 border-brand-blue/40">
+      <header class="bg-brand-navy text-white px-4 py-2.5 border-b-2 border-brand-blue/40">
         <div class="max-w-2xl mx-auto flex items-center justify-between">
-          <div class="flex items-center gap-3">
-            <div class="bg-white rounded-lg p-1.5">
-              <img src="/firstcall-logo.png" alt="FirstCall" class="h-6 w-auto" />
+          <div class="flex items-center gap-2.5">
+            <div class="bg-white rounded-md p-1">
+              <img src="/firstcall-logo.png" alt="FirstCall" class="h-5 w-auto" />
             </div>
             <div>
-              <div class="font-semibold text-sm leading-tight">First Community Bank</div>
-              <div class="text-slate-300 text-[11px]">Fraud Claim Portal · ClearPath</div>
+              <div class="font-semibold text-xs leading-tight">First Community Bank</div>
+              <div class="text-slate-300 text-[10px]">Fraud Claim Portal · ClearPath</div>
             </div>
           </div>
-          <div class="text-right text-sm">
+          <div class="text-right text-xs">
             <div class="font-medium">{DEMO_CASE.consumer.name}</div>
-            <div class="text-slate-400 text-xs">Account ••••{DEMO_CASE.consumer.accountEnding}</div>
+            <div class="text-slate-400 text-[11px]">Account ••••{DEMO_CASE.consumer.accountEnding}</div>
           </div>
         </div>
       </header>
 
       {/* Case banner */}
       <div class="bg-white border-b border-gray-200">
-        <div class="max-w-2xl mx-auto px-4 py-4 flex justify-between items-start gap-4">
-          <div>
-            <div class="text-xs text-gray-400 uppercase tracking-wide font-semibold">Case Number</div>
-            <div class="text-2xl font-bold text-brand-navy tracking-tight">#{DEMO_CASE.id}</div>
-            <div class="text-xs text-gray-500 mt-1">
+        <div class="max-w-2xl mx-auto px-4 py-2.5 flex justify-between items-center gap-4">
+          <div class="flex items-baseline gap-3">
+            <div>
+              <div class="text-[10px] text-gray-400 uppercase tracking-wide font-semibold">Case</div>
+              <div class="text-base font-bold text-brand-navy tracking-tight">#{DEMO_CASE.id}</div>
+            </div>
+            <div class="text-[11px] text-gray-500">
               Filed {DEMO_CASE.filed} · {DEMO_CASE.transactionType} · {DEMO_CASE.amount}
             </div>
           </div>
           {!isResolved && (
             <div class="text-right flex-shrink-0">
-              <div class="text-xs text-gray-400">Reg E Deadline</div>
-              <div class="text-sm font-semibold text-amber-700">{DEMO_CASE.regEDeadline}</div>
+              <div class="text-[10px] text-gray-400 uppercase tracking-wide">Reg E by</div>
+              <div class="text-xs font-semibold text-amber-700">{DEMO_CASE.regEDeadline}</div>
             </div>
           )}
           {isResolved && (
@@ -120,7 +122,7 @@ export default function ConsumerPortal() {
             {tabs.map(({ id, label, badge }) => (
               <button
                 key={id}
-                class={`py-3 px-1 mr-6 text-sm font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${
+                class={`py-2 px-1 mr-6 text-xs font-semibold border-b-2 transition-colors flex items-center gap-1.5 ${
                   activeTab === id
                     ? "border-brand-blue text-brand-blue"
                     : "border-transparent text-gray-500 hover:text-gray-700"
@@ -129,7 +131,7 @@ export default function ConsumerPortal() {
               >
                 {label}
                 {badge && (
-                  <span class="bg-brand-blue text-white text-xs leading-none rounded-full px-1.5 py-0.5">
+                  <span class="bg-brand-blue text-white text-[10px] leading-none rounded-full px-1.5 py-0.5">
                     !
                   </span>
                 )}
@@ -140,7 +142,7 @@ export default function ConsumerPortal() {
       </div>
 
       {/* Tab content */}
-      <div class="max-w-2xl mx-auto px-4 py-6">
+      <div class="max-w-2xl mx-auto px-4 py-3">
         {activeTab === "status" && (
           <StatusTab nodeStates={nodeStates} stage={stage} />
         )}
@@ -157,8 +159,8 @@ export default function ConsumerPortal() {
       </div>
 
       {/* Support footer */}
-      <div class="max-w-2xl mx-auto px-4 pb-4">
-        <div class="bg-white border border-gray-200 rounded-lg p-3 text-center text-xs text-gray-500">
+      <div class="max-w-2xl mx-auto px-4 pb-2">
+        <div class="text-center text-[11px] text-gray-500">
           Questions about your case?{" "}
           <a href="tel:18005551234" class="font-semibold text-brand-blue">
             (800) 555-1234
@@ -173,7 +175,8 @@ export default function ConsumerPortal() {
 
 function StatusTab({ nodeStates, stage }: { nodeStates: NodeState[]; stage: number }) {
   const [questions, setQuestions] = useState<NodeQuestion[]>([]);
-  const [expandedAsk, setExpandedAsk] = useState<number | null>(null);
+  const [expandedNode, setExpandedNode] = useState<number | null>(null);
+  const [askingNode, setAskingNode] = useState<number | null>(null);
 
   useEffect(() => {
     setQuestions(loadQuestions());
@@ -182,121 +185,115 @@ function StatusTab({ nodeStates, stage }: { nodeStates: NodeState[]; stage: numb
     return () => globalThis.removeEventListener(QUESTIONS_CHANGE_EVENT, handler);
   }, []);
 
+  const activeIdx = nodeStates.findIndex((n) => n.status === "in-progress");
+  const effectiveExpanded = expandedNode ?? (activeIdx >= 0 ? activeIdx : null);
+
   return (
     <div>
-      <h2 class="text-base font-semibold text-brand-navy mb-4">Investigation Progress</h2>
+      <h2 class="text-[11px] font-bold text-brand-navy uppercase tracking-wider mb-2">
+        Investigation Progress
+      </h2>
 
-      {stage < 8 && (
-        <div class="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-lg p-3 mb-5">
-          <svg
-            class="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <p class="text-xs text-amber-800">
-            <strong>Regulation E Deadline: {DEMO_CASE.regEDeadline}.</strong> Your bank is required
-            by federal law to resolve this case within 45 business days of your claim.
-          </p>
-        </div>
-      )}
-
-      <div class="space-y-0">
+      <div class="bg-white border border-gray-200 rounded-xl overflow-hidden divide-y divide-gray-100">
         {PROCESS_NODES.map((node, i) => {
           const state = nodeStates[i];
           const isComplete = state.status === "complete";
           const isActive = state.status === "in-progress";
-          const isLast = i === PROCESS_NODES.length - 1;
+          const nodeQuestions = questions.filter((q) => q.nodeIndex === i);
+          const pendingQ = nodeQuestions.filter((q) => !q.answer).length;
+          const isExpanded = i === effectiveExpanded;
+
+          const toggle = () => setExpandedNode(isExpanded ? -1 : i);
 
           return (
-            <div key={node.id} class="flex gap-3">
-              {/* Connector column */}
-              <div class="flex flex-col items-center">
-                <div
-                  class={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 ${
+            <div key={node.id}>
+              <button
+                type="button"
+                class={`w-full flex items-center gap-2.5 px-3 py-2 text-left transition-colors ${
+                  isExpanded ? "bg-brand-blue-soft/40" : "hover:bg-gray-50"
+                }`}
+                onClick={toggle}
+                aria-expanded={isExpanded}
+              >
+                <span
+                  class={`w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 ${
                     isComplete
                       ? "bg-green-500"
                       : isActive
-                      ? "bg-brand-blue ring-4 ring-brand-blue/20"
+                      ? "bg-brand-blue ring-2 ring-brand-blue/20"
                       : "bg-gray-200"
                   }`}
                 >
                   {isComplete && (
-                    <svg
-                      class="w-4 h-4 text-white"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2.5}
-                        d="M5 13l4 4L19 7"
-                      />
+                    <svg class="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
                   )}
-                  {isActive && (
-                    <span class="w-2.5 h-2.5 bg-white rounded-full animate-pulse" />
-                  )}
+                  {isActive && <span class="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />}
                   {!isComplete && !isActive && (
-                    <span class="text-xs font-medium text-gray-400">{i + 1}</span>
+                    <span class="text-[10px] font-bold text-gray-400">{i}</span>
                   )}
-                </div>
-                {!isLast && (
-                  <div
-                    class={`w-0.5 my-1 ${isComplete ? "bg-green-300" : "bg-gray-200"}`}
-                    style="flex: 1; min-height: 16px;"
-                  />
-                )}
-              </div>
+                </span>
 
-              {/* Content */}
-              <div class={`pb-5 flex-1 ${isLast ? "pb-0" : ""}`}>
-                <div class="flex items-center justify-between gap-2 mt-1">
-                  <span
-                    class={`text-sm font-semibold leading-none ${
-                      isComplete
-                        ? "text-brand-navy"
-                        : isActive
-                        ? "text-brand-blue"
-                        : "text-gray-400"
-                    }`}
-                  >
-                    {node.label}
-                    {node.optional && (
-                      <span class="ml-1 text-xs font-normal opacity-50">(optional)</span>
-                    )}
+                <span
+                  class={`text-xs font-semibold flex-1 truncate ${
+                    isComplete ? "text-brand-navy" : isActive ? "text-brand-blue" : "text-gray-400"
+                  }`}
+                >
+                  {node.label}
+                  {node.optional && <span class="ml-1 font-normal opacity-50">(optional)</span>}
+                </span>
+
+                {pendingQ > 0 && (
+                  <span class="text-[10px] font-semibold bg-amber-100 text-amber-800 border border-amber-300 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                    {pendingQ} Q
                   </span>
-                  {isComplete && state.completedAt && (
-                    <span class="text-xs text-gray-400 flex-shrink-0">{state.completedAt}</span>
-                  )}
-                  {isActive && (
-                    <span class="text-xs text-brand-blue font-semibold flex-shrink-0">
-                      In Progress
-                    </span>
-                  )}
-                </div>
-                {(isComplete || isActive) && state.consumerMessage && (
-                  <p class={`mt-1.5 text-xs leading-relaxed ${isActive ? "text-brand-blue" : "text-gray-500"}`}>
-                    {state.consumerMessage}
-                  </p>
+                )}
+                {nodeQuestions.length > 0 && pendingQ === 0 && (
+                  <span class="text-[10px] font-semibold bg-brand-blue-soft text-brand-blue border border-brand-blue/20 px-1.5 py-0.5 rounded-full flex-shrink-0">
+                    {nodeQuestions.length} Q
+                  </span>
+                )}
+                {isActive && (
+                  <span class="text-[10px] text-brand-blue font-semibold flex-shrink-0 uppercase tracking-wide">
+                    Active
+                  </span>
+                )}
+                {isComplete && state.completedAt && (
+                  <span class="text-[10px] text-gray-400 flex-shrink-0">{state.completedAt}</span>
                 )}
 
-                <NodeQA
-                  nodeIndex={i}
-                  questions={questions.filter((q) => q.nodeIndex === i)}
-                  expanded={expandedAsk === i}
-                  onToggle={() => setExpandedAsk((cur) => (cur === i ? null : i))}
-                />
-              </div>
+                <svg
+                  class={`w-3 h-3 text-gray-300 transition-transform flex-shrink-0 ${isExpanded ? "rotate-180" : ""}`}
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {isExpanded && (
+                <div class="px-3 pb-3 pt-1 bg-brand-blue-soft/20">
+                  {(isComplete || isActive) && state.consumerMessage ? (
+                    <p class={`text-xs leading-relaxed ${isActive ? "text-brand-blue" : "text-gray-600"}`}>
+                      {state.consumerMessage}
+                    </p>
+                  ) : (
+                    <p class="text-xs italic text-gray-400">
+                      This stage hasn't started yet. Estimated: {node.estimatedDays}.
+                    </p>
+                  )}
+
+                  <NodeQA
+                    nodeIndex={i}
+                    questions={nodeQuestions}
+                    expanded={askingNode === i}
+                    onToggle={() => setAskingNode((cur) => (cur === i ? null : i))}
+                  />
+                </div>
+              )}
             </div>
           );
         })}
